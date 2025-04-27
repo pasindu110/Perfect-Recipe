@@ -1,4 +1,15 @@
 E:\Git push code\backend\src\main\java\com\perfectrecipe\config\MongoConfig.java
-E:\Git push code\backend\src\main\java\com\perfectrecipe\PerfectRecipeApplication.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\model\SignupRequest.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\config\WebConfig.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\controller\UserController.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\model\User.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\security\JwtAuthenticationFilter.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\PerfectRecipeApplication.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\security\JwtUtil.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\controller\AuthController.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\model\LoginRequest.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\service\UserService.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\security\CustomUserDetailsService.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\security\SecurityConfig.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\config\MultipartConfig.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\repository\UserRepository.java
