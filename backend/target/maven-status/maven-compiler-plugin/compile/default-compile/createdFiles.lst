@@ -1,1 +1,5 @@
-com\example\backend\BackendApplication.class
+com\perfectrecipe\config\MultipartConfig.class
+com\perfectrecipe\config\WebConfig.class
+com\perfectrecipe\config\MongoConfig.class
+com\perfectrecipe\PerfectRecipeApplication.class
+com\perfectrecipe\config\MongoConfig$1.class
