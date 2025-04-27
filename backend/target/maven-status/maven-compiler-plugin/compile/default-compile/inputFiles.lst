@@ -3,6 +3,7 @@ E:\Git push code\backend\src\main\java\com\perfectrecipe\model\AboutInfo.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\controller\RecipeController.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\model\SignupRequest.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\model\Recipe.java
+E:\Git push code\backend\src\main\java\com\perfectrecipe\config\CorsConfig.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\config\WebConfig.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\controller\UserController.java
 E:\Git push code\backend\src\main\java\com\perfectrecipe\model\User.java
