@@ -1,33 +1,25 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material';
-import CssBaseline from '@mui/material/CssBaseline';
+import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+import Footer from './components/Footer';
+import { AuthProvider } from './context/AuthContext';
+import './App.css';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
+    <AuthProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Toaster position="top-center" />
         <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+        <main className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/" element={<Home />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </AuthProvider>
   );
 }
-
 export default App; 
