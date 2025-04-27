@@ -29,8 +29,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/about/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/recipes/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/recipes/*/comments").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/recipes/*/comments").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/recipes/*/like").authenticated()
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS).permitAll()

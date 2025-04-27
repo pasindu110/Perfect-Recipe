@@ -5,6 +5,10 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
+import AddRecipe from './pages/AddRecipe';
+import RecipeList from './pages/RecipeList';
+import RecipeDetail from './pages/RecipeDetail';
+import EditRecipe from './pages/EditRecipe';
 import Footer from './components/Footer';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
@@ -21,6 +25,10 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/add-recipe" element={<AddRecipe />} />
+            <Route path="/recipes" element={<RecipeList />} />
+            <Route path="/recipes/:id" element={<RecipeDetail />} />
+            <Route path="/recipes/edit/:id" element={<EditRecipe />} />
           </Routes>
         </main>
         <Footer />
