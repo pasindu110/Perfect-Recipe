@@ -35,7 +35,7 @@ const AddBlog = () => {
       const response = await fetch('http://localhost:8080/api/blogs', {
         method: 'POST',
         headers: {
-          
+          'Authorization': `Bearer ${token}`
         },
         body: formDataToSend
       });
