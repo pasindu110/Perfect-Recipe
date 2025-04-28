@@ -1,13 +1,9 @@
 package com.perfectrecipe.controller;
 
 import com.perfectrecipe.model.Recipe;
-<<<<<<< HEAD
 import com.perfectrecipe.model.Comment;
 import com.perfectrecipe.repository.RecipeRepository;
 import com.perfectrecipe.repository.CommentRepository;
-=======
-import com.perfectrecipe.repository.RecipeRepository;
->>>>>>> origin/main
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,12 +25,9 @@ public class RecipeController {
     private RecipeRepository recipeRepository;
     
     @Autowired
-<<<<<<< HEAD
     private CommentRepository commentRepository;
     
     @Autowired
-=======
->>>>>>> origin/main
     private ObjectMapper objectMapper;
 
     @GetMapping
@@ -168,7 +161,6 @@ public class RecipeController {
         return recipeRepository.findByUserId(userId);
     }
 
-<<<<<<< HEAD
     @GetMapping("/{recipeId}/comments")
     public ResponseEntity<List<Comment>> getComments(@PathVariable String recipeId) {
         try {
@@ -202,8 +194,6 @@ public class RecipeController {
         }
     }
 
-=======
->>>>>>> origin/main
     @PostMapping("/{id}/like")
     public ResponseEntity<?> likeRecipe(@PathVariable String id, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
