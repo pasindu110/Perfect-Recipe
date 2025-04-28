@@ -1,5 +1,6 @@
 @tailwind base;
 @tailwind components;
+<<<<<<< HEAD
 @tailwind utilities;
 
 :root {
@@ -18,3 +19,6 @@ body {
   width: 100%;
   min-height: 100vh;
 } 
+=======
+@tailwind utilities; 
+>>>>>>> origin/main

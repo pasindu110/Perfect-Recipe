@@ -4,6 +4,7 @@ com\perfectrecipe\config\MongoConfig.class
 com\perfectrecipe\model\Recipe$NutritionFacts.class
 com\perfectrecipe\model\Recipe$RecipeBuilder.class
 com\perfectrecipe\model\SignupRequest.class
+<<<<<<< HEAD
 com\perfectrecipe\repository\BlogRepository.class
 com\perfectrecipe\repository\CommentRepository.class
 com\perfectrecipe\model\Recipe.class
@@ -11,19 +12,35 @@ com\perfectrecipe\model\User.class
 com\perfectrecipe\controller\RecipeController$2.class
 com\perfectrecipe\model\Comment.class
 com\perfectrecipe\controller\BlogController.class
+=======
+com\perfectrecipe\model\Recipe.class
+com\perfectrecipe\model\User.class
+com\perfectrecipe\controller\RecipeController$2.class
+>>>>>>> origin/main
 com\perfectrecipe\security\JwtUtil.class
 com\perfectrecipe\PerfectRecipeApplication.class
 com\perfectrecipe\security\CustomUserDetailsService.class
 com\perfectrecipe\service\UserService.class
+<<<<<<< HEAD
+=======
+com\perfectrecipe\model\AboutInfo.class
+com\perfectrecipe\controller\AboutController.class
+>>>>>>> origin/main
 com\perfectrecipe\security\SecurityConfig.class
 com\perfectrecipe\controller\RecipeController$1.class
 com\perfectrecipe\controller\UserController.class
 com\perfectrecipe\controller\AuthController.class
 com\perfectrecipe\config\MongoConfig$1.class
 com\perfectrecipe\controller\RecipeController.class
+<<<<<<< HEAD
 com\perfectrecipe\model\Blog.class
 com\perfectrecipe\config\WebConfig.class
 com\perfectrecipe\repository\RecipeRepository.class
 com\perfectrecipe\security\JwtAuthenticationFilter.class
 com\perfectrecipe\service\BlogService.class
+=======
+com\perfectrecipe\config\WebConfig.class
+com\perfectrecipe\repository\RecipeRepository.class
+com\perfectrecipe\security\JwtAuthenticationFilter.class
+>>>>>>> origin/main
 com\perfectrecipe\repository\UserRepository.class

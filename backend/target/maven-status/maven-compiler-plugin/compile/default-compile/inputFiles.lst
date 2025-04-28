@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\security\JwtAuthenticationFilter.java
 D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\repository\UserRepository.java
 D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\config\WebConfig.java
@@ -24,3 +25,29 @@ D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\model\Lo
 D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\controller\UserController.java
 D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\model\Blog.java
 D:\New folder (3)\Pasindu new 2\backend\src\main\java\com\perfectrecipe\controller\BlogController.java
+=======
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\controller\RecipeController.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\config\WebConfig.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\security\JwtUtil.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\model\AboutInfo.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\model\SignupRequest.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\model\User.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\repository\UserRepository.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\controller\AuthController.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\model\Recipe.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\service\BlogService.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\model\Blog.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\repository\BlogRepository.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\config\MongoConfig.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\controller\AboutController.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\PerfectRecipeApplication.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\repository\RecipeRepository.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\config\MultipartConfig.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\security\JwtAuthenticationFilter.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\service\UserService.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\controller\BlogController.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\controller\UserController.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\security\SecurityConfig.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\model\LoginRequest.java
+E:\Jayani Git\Perfect-Recipe\backend\src\main\java\com\perfectrecipe\security\CustomUserDetailsService.java
+>>>>>>> origin/main
