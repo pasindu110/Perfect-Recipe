@@ -1,7 +1,9 @@
 package com.perfectrecipe.controller;
 
 import com.perfectrecipe.model.Recipe;
+import com.perfectrecipe.model.Comment;
 import com.perfectrecipe.repository.RecipeRepository;
+import com.perfectrecipe.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,9 @@ public class RecipeController {
 
     @Autowired
     private RecipeRepository recipeRepository;
+    
+    @Autowired
+    private CommentRepository commentRepository;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -154,6 +159,39 @@ public class RecipeController {
     @GetMapping("/user/{userId}")
     public List<Recipe> getRecipesByUser(@PathVariable String userId) {
         return recipeRepository.findByUserId(userId);
+    }
+
+    @GetMapping("/{recipeId}/comments")
+    public ResponseEntity<List<Comment>> getComments(@PathVariable String recipeId) {
+        try {
+            List<Comment> comments = commentRepository.findByRecipeIdOrderByCreatedAtDesc(recipeId);
+            return ResponseEntity.ok(comments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/{recipeId}/comments")
+    public ResponseEntity<Comment> addComment(
+            @PathVariable String recipeId,
+            @RequestParam("userId") String userId,
+            @RequestParam("authorName") String authorName,
+            @RequestParam("content") String content,
+            @RequestParam("rating") int rating) {
+        try {
+            Comment comment = new Comment();
+            comment.setRecipeId(recipeId);
+            comment.setUserId(userId);
+            comment.setAuthorName(authorName);
+            comment.setContent(content);
+            comment.setRating(rating);
+            comment.setCreatedAt(java.time.LocalDateTime.now().toString());
+            
+            Comment savedComment = commentRepository.save(comment);
+            return ResponseEntity.ok(savedComment);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/{id}/like")
