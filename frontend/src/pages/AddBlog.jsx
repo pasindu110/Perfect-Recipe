@@ -9,7 +9,7 @@ const AddBlog = () => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-
+    image: null,
   });
 
   const handleChange = (e) => {
