@@ -13,6 +13,7 @@ const EditBlog = () => {
     image: null,
   });
   const [loading, setLoading] = useState(true);
+  const [blog, setBlog] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -22,6 +23,13 @@ const EditBlog = () => {
     }
     fetchBlog();
   }, [isAuthenticated, navigate, id]);
+
+  useEffect(() => {
+    // Fetch the blog data by ID
+    fetch(`http://localhost:8080/api/blogs/${id}`)
+      .then(res => res.json())
+      .then(data => setBlog(data));
+  }, [id]);
 
   const fetchBlog = async () => {
     try {
