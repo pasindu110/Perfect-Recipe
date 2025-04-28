@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.perfectrecipe.model.User;
+import com.perfectrecipe.repository.UserRepository;
 
 import java.util.List;
 import java.util.Map;
@@ -13,16 +17,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import com.perfectrecipe.dto.BlogDto;
+import com.perfectrecipe.dto.BlogMapper;
 
 @RestController
 @RequestMapping("/api/blogs")
 public class BlogController {
     private final BlogService blogService;
     private final Logger logger = LoggerFactory.getLogger(BlogController.class);
+    private final UserRepository userRepository;
 
     @Autowired
-    public BlogController(BlogService blogService) {
+    public BlogController(BlogService blogService, UserRepository userRepository) {
         this.blogService = blogService;
+        this.userRepository = userRepository;
         logger.info("BlogController initialized");
     }
 
@@ -41,7 +49,7 @@ public class BlogController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Blog> getBlogById(@PathVariable String id) {
+    public ResponseEntity<BlogDto> getBlogById(@PathVariable String id) {
         logger.info("Received request to fetch blog with id: {}", id);
         
         if (id == null || id.trim().isEmpty()) {
@@ -53,7 +61,8 @@ public class BlogController {
             return blogService.getBlogById(id)
                     .map(blog -> {
                         logger.info("Successfully found blog: {}", blog);
-                        return ResponseEntity.ok(blog);
+                        BlogDto dto = BlogMapper.toDto(blog);
+                        return ResponseEntity.ok(dto);
                     })
                     .orElseGet(() -> {
                         logger.warn("No blog found with id: {}", id);
@@ -78,6 +87,12 @@ public class BlogController {
             blog.setTitle(title);
             blog.setContent(content);
             
+            // Get the authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+            blog.setUser(user);
+
             if (image != null && !image.isEmpty()) {
                 String imageUrl = blogService.saveImage(image);
                 blog.setImageUrl(imageUrl);

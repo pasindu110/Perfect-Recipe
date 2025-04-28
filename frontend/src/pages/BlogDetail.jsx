@@ -181,22 +181,22 @@ const BlogDetail = () => {
 
   // Improved author check - check all possible fields
   const isAuthor = isAuthenticated && user?.id && (
-    blog?.userId === user?.id || 
-    blog?.user_id === user?.id || 
-    blog?.author === user?.id ||
-    blog?.createdBy === user?.id ||
-    blog?.user?.id === user?.id
+    blog?.userId == user?.id || 
+    blog?.user_id == user?.id || 
+    blog?.author ==user?.id ||
+    blog?.createdBy == user?.id ||
+    blog?.user?.id ==user?.id
   );
 
   console.log('Is Author Check:', {
     isAuthenticated,
     userId: user?.id,
     matches: {
-      userId: blog?.userId === user?.id,
-      user_id: blog?.user_id === user?.id,
-      author: blog?.author === user?.id,
-      createdBy: blog?.createdBy === user?.id,
-      userDotId: blog?.user?.id === user?.id
+      userId: blog?.userId == user?.id,
+      user_id: blog?.user_id == user?.id,
+      author: blog?.author == user?.id,
+      createdBy: blog?.createdBy == user?.id,
+      userDotId: blog?.user?.id == user?.id
     },
     finalResult: isAuthor
   });
