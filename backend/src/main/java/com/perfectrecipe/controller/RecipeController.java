@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Base64;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/recipes")
@@ -200,10 +201,25 @@ public class RecipeController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User must be authenticated to like recipes");
         }
 
+        String userId = authentication.getName();
         return recipeRepository.findById(id)
                 .map(recipe -> {
-                    // Increment likes count
-                    recipe.setLikes(recipe.getLikes() == null ? 1 : recipe.getLikes() + 1);
+                    // Initialize likedByUsers if null
+                    if (recipe.getLikedByUsers() == null) {
+                        recipe.setLikedByUsers(new ArrayList<>());
+                    }
+                    
+                    // Toggle like
+                    if (recipe.getLikedByUsers().contains(userId)) {
+                        // Remove like
+                        recipe.getLikedByUsers().remove(userId);
+                        recipe.setLikes(recipe.getLikes() == null ? 0 : recipe.getLikes() - 1);
+                    } else {
+                        // Add like
+                        recipe.getLikedByUsers().add(userId);
+                        recipe.setLikes(recipe.getLikes() == null ? 1 : recipe.getLikes() + 1);
+                    }
+                    
                     Recipe updatedRecipe = recipeRepository.save(recipe);
                     return ResponseEntity.ok(updatedRecipe);
                 })
