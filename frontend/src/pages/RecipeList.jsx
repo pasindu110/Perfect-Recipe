@@ -113,18 +113,19 @@ const RecipeList = () => {
 
       if (response.status === 200) {
         const updatedRecipe = response.data;
+        const liked = updatedRecipe.likedByUsers?.includes(user.id);
         setRecipes(prevRecipes =>
           prevRecipes.map(recipe =>
             recipe.id === recipeId
               ? { 
                   ...recipe, 
                   likes: updatedRecipe.likes,
-                  isLiked: updatedRecipe.likedByUsers?.includes(user.id)
+                  isLiked: liked
                 }
               : recipe
           )
         );
-        toast.success(updatedRecipe.likedByUsers?.includes(user.id) ? 'Recipe liked!' : 'Like removed!');
+        toast.success(liked ? 'Recipe liked!' : 'Like removed!');
       }
     } catch (error) {
       console.error('Error liking recipe:', error);
@@ -149,18 +150,19 @@ const RecipeList = () => {
 
             if (retryResponse.status === 200) {
               const updatedRecipe = retryResponse.data;
+              const liked = updatedRecipe.likedByUsers?.includes(user.id);
               setRecipes(prevRecipes =>
                 prevRecipes.map(recipe =>
                   recipe.id === recipeId
                     ? { 
                         ...recipe, 
                         likes: updatedRecipe.likes,
-                        isLiked: updatedRecipe.likedByUsers?.includes(user.id)
+                        isLiked: liked
                       }
                     : recipe
                 )
               );
-              toast.success(updatedRecipe.likedByUsers?.includes(user.id) ? 'Recipe liked!' : 'Like removed!');
+              toast.success(liked ? 'Recipe liked!' : 'Like removed!');
               return;
             }
           } else {
