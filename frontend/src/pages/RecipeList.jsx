@@ -113,18 +113,20 @@ const RecipeList = () => {
 
       if (response.status === 200) {
         const updatedRecipe = response.data;
+        // Update the recipe's like state
+        const newIsLiked = updatedRecipe.likedByUsers?.includes(user.id) || false;
         setRecipes(prevRecipes =>
           prevRecipes.map(recipe =>
             recipe.id === recipeId
               ? { 
                   ...recipe, 
                   likes: updatedRecipe.likes,
-                  isLiked: updatedRecipe.likedByUsers?.includes(user.id)
+                  isLiked: newIsLiked
                 }
               : recipe
           )
         );
-        toast.success(updatedRecipe.likedByUsers?.includes(user.id) ? 'Recipe liked!' : 'Like removed!');
+        toast.success(newIsLiked ? 'Recipe liked!' : 'Like removed!');
       }
     } catch (error) {
       console.error('Error liking recipe:', error);
@@ -142,25 +144,26 @@ const RecipeList = () => {
               {
                 headers: {
                   'Authorization': `Bearer ${newToken}`,
-                  'Content-Type': 'application/json'
+                  
                 }
               }
             );
 
             if (retryResponse.status === 200) {
               const updatedRecipe = retryResponse.data;
+              const newIsLiked = updatedRecipe.likedByUsers?.includes(user.id) || false;
               setRecipes(prevRecipes =>
                 prevRecipes.map(recipe =>
                   recipe.id === recipeId
                     ? { 
                         ...recipe, 
                         likes: updatedRecipe.likes,
-                        isLiked: updatedRecipe.likedByUsers?.includes(user.id)
+                        isLiked: newIsLiked
                       }
                     : recipe
                 )
               );
-              toast.success(updatedRecipe.likedByUsers?.includes(user.id) ? 'Recipe liked!' : 'Like removed!');
+              toast.success(newIsLiked ? 'Recipe liked!' : 'Like removed!');
               return;
             }
           } else {

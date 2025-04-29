@@ -188,8 +188,9 @@ const RecipeDetail = () => {
       if (response.ok) {
         const updatedRecipe = await response.json();
         setRecipe(updatedRecipe);
-        setIsLiked(updatedRecipe.likedByUsers?.includes(user.id));
-        toast.success(updatedRecipe.likedByUsers?.includes(user.id) ? 'Recipe liked!' : 'Like removed!');
+        const newIsLiked = updatedRecipe.likedByUsers?.includes(user.id) || false;
+        setIsLiked(newIsLiked);
+        toast.success(newIsLiked ? 'Recipe liked!' : 'Like removed!');
       } else {
         throw new Error('Failed to like recipe');
       }
