@@ -13,9 +13,10 @@ const RecipeDetail = () => {
   const [newComment, setNewComment] = useState('');
   const [rating, setRating] = useState(0);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -46,6 +47,7 @@ const RecipeDetail = () => {
 
         const data = await response.json();
         setRecipe(data);
+        setIsLiked(data.likedByUsers?.includes(user?.id));
       } catch (error) {
         console.error('Error fetching recipe:', error);
         setError(error.message);
@@ -75,7 +77,7 @@ const RecipeDetail = () => {
       fetchRecipe();
       fetchComments();
     }
-  }, [id, navigate]);
+  }, [id, navigate, user]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this recipe?')) {
@@ -157,6 +159,43 @@ const RecipeDetail = () => {
       toast.error('Failed to post comment');
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!user || !isAuthenticated) {
+      toast.error('Please login to like recipes');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to like recipes');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/recipes/${id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const updatedRecipe = await response.json();
+        setRecipe(updatedRecipe);
+        setIsLiked(updatedRecipe.likedByUsers?.includes(user.id));
+        toast.success(updatedRecipe.likedByUsers?.includes(user.id) ? 'Recipe liked!' : 'Like removed!');
+      } else {
+        throw new Error('Failed to like recipe');
+      }
+    } catch (error) {
+      console.error('Error liking recipe:', error);
+      toast.error('Failed to like recipe. Please try again.');
     }
   };
 
@@ -288,12 +327,26 @@ const RecipeDetail = () => {
                   </div>
                 )}
                 <div className="flex items-center space-x-2">
-                  <button className="text-primary hover:text-primary-dark">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  <button 
+                    onClick={handleLike}
+                    className="text-primary hover:text-primary-dark"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-6 w-6 ${isLiked ? 'text-rose-500 fill-current' : 'text-gray-400 hover:text-rose-500'}`}
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                      />
                     </svg>
                   </button>
-                  <span className="text-gray-600">{recipe.likes || 0} likes</span>
+                  <span className="text-gray-600">{recipe?.likes || 0} likes</span>
                 </div>
               </div>
             </div>
