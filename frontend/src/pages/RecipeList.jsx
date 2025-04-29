@@ -144,7 +144,7 @@ const RecipeList = () => {
               {
                 headers: {
                   'Authorization': `Bearer ${newToken}`,
-                  
+                  'Content-Type': 'application/json'
                   
                 }
               }
