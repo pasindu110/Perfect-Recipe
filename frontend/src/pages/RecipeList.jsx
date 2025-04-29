@@ -45,7 +45,12 @@ const RecipeList = () => {
           }
           
           const data = await retryResponse.json();
-          setRecipes(data);
+          // Initialize isLiked state for each recipe
+          const recipesWithLikeState = data.map(recipe => ({
+            ...recipe,
+            isLiked: recipe.likedByUsers?.includes(user?.id) || false
+          }));
+          setRecipes(recipesWithLikeState);
           return;
         } else {
           // If refresh failed, logout and redirect
@@ -60,7 +65,12 @@ const RecipeList = () => {
       }
 
       const data = await response.json();
-      setRecipes(data);
+      // Initialize isLiked state for each recipe
+      const recipesWithLikeState = data.map(recipe => ({
+        ...recipe,
+        isLiked: recipe.likedByUsers?.includes(user?.id) || false
+      }));
+      setRecipes(recipesWithLikeState);
     } catch (error) {
       console.error('Error fetching recipes:', error);
       toast.error(error.message || 'Failed to load recipes');
@@ -296,14 +306,14 @@ const RecipeList = () => {
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
                       className={`h-6 w-6 ${recipe.isLiked ? 'text-rose-500 fill-current' : 'text-gray-400 group-hover:text-rose-500'}`}
-                      fill="none" 
                       viewBox="0 0 24 24" 
                       stroke="currentColor"
+                      fill={recipe.isLiked ? "currentColor" : "none"}
+                      strokeWidth={recipe.isLiked ? "0" : "2"}
                     >
                       <path 
                         strokeLinecap="round" 
                         strokeLinejoin="round" 
-                        strokeWidth={2} 
                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
                       />
                     </svg>
