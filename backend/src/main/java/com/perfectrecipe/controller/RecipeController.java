@@ -17,6 +17,7 @@ import java.util.Base64;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import java.util.ArrayList;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/recipes")
@@ -224,5 +225,94 @@ public class RecipeController {
                     return ResponseEntity.ok(updatedRecipe);
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{recipeId}/comments/{commentId}")
+    public ResponseEntity<Comment> updateComment(
+            @PathVariable String recipeId,
+            @PathVariable String commentId,
+            @RequestParam("content") String content,
+            @RequestParam("rating") int rating,
+            Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            Optional<Comment> commentOpt = commentRepository.findById(commentId);
+            if (commentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Comment comment = commentOpt.get();
+            // Verify the user owns this comment
+            if (!comment.getUserId().equals(authentication.getName())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            comment.setContent(content);
+            comment.setRating(rating);
+            Comment updatedComment = commentRepository.save(comment);
+            return ResponseEntity.ok(updatedComment);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @DeleteMapping("/{recipeId}/comments/{commentId}")
+    public ResponseEntity<?> deleteComment(
+            @PathVariable String recipeId,
+            @PathVariable String commentId,
+            Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                System.out.println("Authentication is null or not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("User must be authenticated to delete comments");
+            }
+
+            // Extract user ID from the authentication token
+            String authenticatedUserId = authentication.getName();
+            System.out.println("Authenticated user ID from token: " + authenticatedUserId);
+
+            Optional<Comment> commentOpt = commentRepository.findById(commentId);
+            if (commentOpt.isEmpty()) {
+                System.out.println("Comment not found with ID: " + commentId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Comment not found");
+            }
+
+            Comment comment = commentOpt.get();
+            String commentUserId = comment.getUserId();
+            
+            System.out.println("Comment details:");
+            System.out.println("- Comment ID: " + comment.getId());
+            System.out.println("- Comment user ID: " + commentUserId);
+            System.out.println("- Recipe ID: " + comment.getRecipeId());
+            System.out.println("- Author name: " + comment.getAuthorName());
+            System.out.println("Comparing user IDs:");
+            System.out.println("- Authenticated user ID: " + authenticatedUserId);
+            System.out.println("- Comment user ID: " + commentUserId);
+
+            // Check if the authenticated user is the owner of the comment
+            if (!commentUserId.equals(authenticatedUserId)) {
+                System.out.println("User ID mismatch - Authorization failed");
+                System.out.println("Comment user ID: [" + commentUserId + "]");
+                System.out.println("Authenticated user ID: [" + authenticatedUserId + "]");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You can only delete your own comments");
+            }
+
+            System.out.println("Authorization successful - Deleting comment");
+            commentRepository.deleteById(commentId);
+            return ResponseEntity.ok()
+                .body("Comment deleted successfully");
+        } catch (Exception e) {
+            System.err.println("Error in deleteComment:");
+            System.err.println("- Error message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error deleting comment: " + e.getMessage());
+        }
     }
 }
