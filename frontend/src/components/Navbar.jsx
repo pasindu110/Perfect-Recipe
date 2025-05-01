@@ -21,6 +21,7 @@ const Navbar = () => {
             <Link to="/add-recipe" className="text-gray-600 hover:text-rose-500">Add Recipe</Link>
             <Link to="/about" className="text-gray-600 hover:text-rose-500">About Us</Link>
             <Link to="/blogs" className="text-gray-600 hover:text-rose-500">Blogs</Link>
+            <Link to="/challenges" className="text-gray-600 hover:text-rose-500">Challenges</Link>
           </div>
 
           <div className="flex items-center space-x-4">

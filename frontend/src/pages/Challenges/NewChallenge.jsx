@@ -37,7 +37,7 @@ const NewChallenge = () => {
         startTime: start,
         endTime: end,
         status: status,
-        userId: "user123", // Replace with actual user ID
+        //userId: "user123", // Replace with actual user ID
       });
 
       if (response.status === 200 || response.status === 201) {

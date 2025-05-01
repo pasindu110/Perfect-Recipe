@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 export default function ChallengePage() {
   const [challenges, setChallenges] = useState([]);
   const navigate = useNavigate();
-  const userId = "user123"; // Replace this with dynamic auth user ID
+ // const userId = "user123"; // Replace this with dynamic auth user ID
 
   useEffect(() => {
     fetchChallenges();
@@ -13,7 +13,8 @@ export default function ChallengePage() {
 
   const fetchChallenges = async () => {
     try {
-      const res = await axios.get(`/api/challenges/${userId}`);
+      // const res = await axios.get(`/api/challenges/${userId}`);
+      console.log("API response:", res.data);
       setChallenges(res.data);
     } catch (err) {
       console.error("Error fetching challenges:", err);
