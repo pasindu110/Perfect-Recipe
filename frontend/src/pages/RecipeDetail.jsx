@@ -137,14 +137,23 @@ const RecipeDetail = () => {
     setIsSubmittingComment(true);
 
     try {
+      console.log('Submitting comment with user details:');
+      console.log('- User ID:', user.id);
+      console.log('- User email:', user.email);
+      console.log('- User full name:', user.fullName);
+
       const formData = new FormData();
       formData.append('userId', user.id);
       formData.append('authorName', user.fullName);
       formData.append('content', newComment);
       formData.append('rating', rating);
 
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/recipes/${id}/comments`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
 
@@ -153,6 +162,7 @@ const RecipeDetail = () => {
       }
 
       const newCommentData = await response.json();
+      console.log('New comment data:', newCommentData);
       setComments(prev => [newCommentData, ...prev]);
       setNewComment('');
       setRating(0);
@@ -288,11 +298,20 @@ const RecipeDetail = () => {
         return;
       }
 
-      console.log('Attempting to delete comment:');
+      console.log('\nAttempting to delete comment:');
+      console.log('Comment details:');
       console.log('- Comment ID:', commentId);
       console.log('- Comment user ID:', commentToDelete.userId);
-      console.log('- Current user ID:', user.id);
-      console.log('- Token present:', !!token);
+      console.log('- Comment author:', commentToDelete.authorName);
+      
+      console.log('\nAuthenticated user details:');
+      console.log('- User ID:', user.id);
+      console.log('- User email:', user.email);
+      console.log('- User full name:', user.fullName);
+      console.log('- Token:', token);
+
+      console.log('\nOwnership check:');
+      console.log('- Comment user ID matches current user ID?', commentToDelete.userId === user.id);
 
       const response = await fetch(`${API_URL}/api/recipes/${id}/comments/${commentId}`, {
         method: 'DELETE',
@@ -303,8 +322,15 @@ const RecipeDetail = () => {
         }
       });
 
-      const responseText = await response.text();
-      console.log('Server response:', response.status, responseText);
+      let responseText;
+      try {
+        responseText = await response.text();
+        console.log('\nServer response:');
+        console.log('- Status:', response.status);
+        console.log('- Response:', responseText);
+      } catch (e) {
+        console.log('Could not get response text:', e);
+      }
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -313,6 +339,7 @@ const RecipeDetail = () => {
           return;
         }
         if (response.status === 403) {
+          console.error('Authorization failed. Server response:', responseText);
           toast.error('You can only delete your own comments');
           return;
         }

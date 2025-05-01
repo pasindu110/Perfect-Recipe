@@ -18,6 +18,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import java.util.ArrayList;
 import java.util.Optional;
+import com.perfectrecipe.model.User;
+import com.perfectrecipe.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/recipes")
@@ -31,6 +33,9 @@ public class RecipeController {
     
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     public List<Recipe> getAllRecipes() {
@@ -179,8 +184,30 @@ public class RecipeController {
             @RequestParam("userId") String userId,
             @RequestParam("authorName") String authorName,
             @RequestParam("content") String content,
-            @RequestParam("rating") int rating) {
+            @RequestParam("rating") int rating,
+            Authentication authentication) {
         try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(null);
+            }
+
+            // Verify the authenticated user matches the userId
+            String userEmail = authentication.getName();
+            User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            System.out.println("\nAdding comment:");
+            System.out.println("Authentication details:");
+            System.out.println("- User email: " + userEmail);
+            System.out.println("- User ID from token: " + user.getId());
+            System.out.println("- Provided user ID: " + userId);
+
+            if (!user.getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(null);
+            }
+
             Comment comment = new Comment();
             comment.setRecipeId(recipeId);
             comment.setUserId(userId);
@@ -190,9 +217,14 @@ public class RecipeController {
             comment.setCreatedAt(java.time.LocalDateTime.now().toString());
             
             Comment savedComment = commentRepository.save(comment);
+            System.out.println("Comment saved successfully:");
+            System.out.println("- Comment ID: " + savedComment.getId());
+            System.out.println("- User ID: " + savedComment.getUserId());
             return ResponseEntity.ok(savedComment);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            System.err.println("Error adding comment: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
@@ -228,52 +260,30 @@ public class RecipeController {
     }
 
     @PutMapping("/{recipeId}/comments/{commentId}")
-    public ResponseEntity<Comment> updateComment(
+    public ResponseEntity<?> updateComment(
             @PathVariable String recipeId,
             @PathVariable String commentId,
             @RequestParam("content") String content,
             @RequestParam("rating") int rating,
             Authentication authentication) {
         try {
-            if (authentication == null || !authentication.isAuthenticated()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
-
-            Optional<Comment> commentOpt = commentRepository.findById(commentId);
-            if (commentOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            Comment comment = commentOpt.get();
-            // Verify the user owns this comment
-            if (!comment.getUserId().equals(authentication.getName())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-
-            comment.setContent(content);
-            comment.setRating(rating);
-            Comment updatedComment = commentRepository.save(comment);
-            return ResponseEntity.ok(updatedComment);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    @DeleteMapping("/{recipeId}/comments/{commentId}")
-    public ResponseEntity<?> deleteComment(
-            @PathVariable String recipeId,
-            @PathVariable String commentId,
-            Authentication authentication) {
-        try {
+            System.out.println("\n=== Update Comment Request ===");
             if (authentication == null || !authentication.isAuthenticated()) {
                 System.out.println("Authentication is null or not authenticated");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("User must be authenticated to delete comments");
+                    .body("User must be authenticated to update comments");
             }
 
-            // Extract user ID from the authentication token
-            String authenticatedUserId = authentication.getName();
-            System.out.println("Authenticated user ID from token: " + authenticatedUserId);
+            // Get user email from authentication
+            String userEmail = authentication.getName();
+            System.out.println("\nAuthentication Details:");
+            System.out.println("- User Email: " + userEmail);
+
+            // Get user ID from email
+            User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+            String authenticatedUserId = user.getId();
+            System.out.println("- User ID: " + authenticatedUserId);
 
             Optional<Comment> commentOpt = commentRepository.findById(commentId);
             if (commentOpt.isEmpty()) {
@@ -285,34 +295,57 @@ public class RecipeController {
             Comment comment = commentOpt.get();
             String commentUserId = comment.getUserId();
             
-            System.out.println("Comment details:");
+            System.out.println("\nComment details:");
             System.out.println("- Comment ID: " + comment.getId());
-            System.out.println("- Comment user ID: " + commentUserId);
+            System.out.println("- Comment user ID: [" + commentUserId + "]");
             System.out.println("- Recipe ID: " + comment.getRecipeId());
             System.out.println("- Author name: " + comment.getAuthorName());
-            System.out.println("Comparing user IDs:");
-            System.out.println("- Authenticated user ID: " + authenticatedUserId);
-            System.out.println("- Comment user ID: " + commentUserId);
+            
+            System.out.println("\nUser ID comparison:");
+            System.out.println("- Authenticated user ID: [" + authenticatedUserId + "]");
+            System.out.println("- Comment user ID: [" + commentUserId + "]");
+            System.out.println("- Are IDs equal? " + commentUserId.equals(authenticatedUserId));
 
             // Check if the authenticated user is the owner of the comment
             if (!commentUserId.equals(authenticatedUserId)) {
-                System.out.println("User ID mismatch - Authorization failed");
-                System.out.println("Comment user ID: [" + commentUserId + "]");
-                System.out.println("Authenticated user ID: [" + authenticatedUserId + "]");
+                System.out.println("\nAuthorization failed - User IDs do not match");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("You can only delete your own comments");
+                    .body("You can only update your own comments");
             }
 
-            System.out.println("Authorization successful - Deleting comment");
-            commentRepository.deleteById(commentId);
-            return ResponseEntity.ok()
-                .body("Comment deleted successfully");
+            // Update comment
+            comment.setContent(content);
+            comment.setRating(rating);
+            Comment updatedComment = commentRepository.save(comment);
+            
+            System.out.println("\nComment updated successfully:");
+            System.out.println("- Comment ID: " + updatedComment.getId());
+            System.out.println("- New content: " + updatedComment.getContent());
+            System.out.println("- New rating: " + updatedComment.getRating());
+            
+            return ResponseEntity.ok(updatedComment);
         } catch (Exception e) {
-            System.err.println("Error in deleteComment:");
+            System.err.println("\nError in updateComment:");
             System.err.println("- Error message: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error deleting comment: " + e.getMessage());
+                .body("Error updating comment: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{recipeId}/comments/{commentId}")
+    public ResponseEntity<?> deleteComment(
+            @PathVariable String recipeId,
+            @PathVariable String commentId) {
+        try {
+            commentRepository.deleteById(commentId);
+            System.out.println("Successfully deleted comment with id: " + commentId);
+            return ResponseEntity.ok().body("Comment deleted successfully");
+        } catch (Exception e) {
+            System.err.println("Error deleting comment: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to delete comment: " + e.getMessage());
         }
     }
 }
