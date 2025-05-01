@@ -27,7 +27,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/")
                 .setCachePeriod(3600)
                 .resourceChain(true);
-
+                
         // Serve uploaded files
         String uploadDir = Paths.get("uploads").toAbsolutePath().toString();
         registry.addResourceHandler("/uploads/**")
