@@ -45,7 +45,7 @@ function App() {
             <Route path="/blogs/:id" element={<BlogDetail />} />
             <Route path="/blogs/:id/edit" element={<EditBlog />} />
             <Route path="/about" element={<About />} />
-            <Route path="/challenges" element={<ChallengePage />} />
+            <Route path="/challenges/:userId" element={<ChallengePage />} />
             <Route path="/new-challenge" element={<NewChallenge />} />
             <Route path="/challenge/:id/start" element={<ActiveChallenge />} />
             <Route path="/challenge/:id/view" element={<ViewChallenge />} />

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config/config';
 import axios from "axios";
 
 const NewChallenge = () => {
@@ -10,6 +12,7 @@ const NewChallenge = () => {
   const [date, setDate] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const { token } = useAuth();
 
   useEffect(() => {
     if (location.state?.selected) {
@@ -17,33 +20,107 @@ const NewChallenge = () => {
     }
   }, [location.state]);
 
+  // const handleSubmit = async () => {
+  //   if (!date || !start || !end) {
+  //     alert("Please fill all fields");
+  //     return;
+  //   }
+
+  //   // Combine date and time into a JS Date object
+  //   const selectedStartDateTime = new Date(`${date}T${start}`);
+  //   const now = new Date();
+
+  //   const isActiveNow = selectedStartDateTime <= now;
+  //   const status = isActiveNow ? "Active" : "Pending";
+  //   const userId = "680c69ca2c6262762bea2159";
+  //   const token = localStorage.getItem("token");
+
+  //   try {
+  //     const response = await axios.post(`${API_URL}/api/challenges/${userId}`, {
+  //       title: selected?.name || "Untitled Challenge",
+  //       userId: userId,
+  //       startDate: date,
+  //       startTime: start,
+  //       endTime: end,
+  //       status: status,
+  //     },
+  //     {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //         "Content-Type": "application/json",
+  //       },
+  //     }
+  //   );
+
+  //     if (response.status === 200 || response.status === 201) {
+  //       alert("Challenge saved successfully!");
+  //       const challengeId = response.data.id;
+        
+  //       if (isActiveNow) {
+  //         navigate(`/challenge/${challengeId}/start`);
+  //       } else {
+  //         navigate("/challenges");
+  //       }
+  //     }
+  //   } catch (error) {
+  //     if (error.response?.status === 401) {
+  //       alert("Unauthorized. Please log in again.");
+  //       navigate("/login");
+  //     } else {
+  //       alert("Error creating challenge. Please try again.");
+  //     }
+  //     console.error("Challenge creation error:", error);
+  //   }
+  // };
+
   const handleSubmit = async () => {
     if (!date || !start || !end) {
       alert("Please fill all fields");
       return;
     }
-
+  
     // Combine date and time into a JS Date object
     const selectedStartDateTime = new Date(`${date}T${start}`);
     const now = new Date();
-
+  
     const isActiveNow = selectedStartDateTime <= now;
     const status = isActiveNow ? "Active" : "Pending";
-
+    const userId = "680c69ca2c6262762bea2159";
+  
+    // const token = localStorage.getItem("token");
+  
+    if (!token) {
+      alert("Authorization token missing. Please log in again.");
+      navigate("/login");
+      return;
+    }
+  
     try {
-      const response = await axios.post("/api/challenges", {
-        title: selected?.name || "Untitled Challenge",
-        startDate: date,
-        startTime: start,
-        endTime: end,
-        status: status,
-        //userId: "user123", // Replace with actual user ID
-      });
-
+      const response = await fetch(
+        `${API_URL}/api/challenges/${userId}`,
+        {
+          method: 'POST',
+        },
+        {
+          title: selected?.name || "Untitled Challenge",
+          userId: userId,
+          startDate: date,
+          startTime: start,
+          endTime: end,
+          status: status,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            // "Content-Type": "application/json",
+          },
+        }
+      );
+  
       if (response.status === 200 || response.status === 201) {
         alert("Challenge saved successfully!");
         const challengeId = response.data.id;
-        
+  
         if (isActiveNow) {
           navigate(`/challenge/${challengeId}/start`);
         } else {
@@ -51,10 +128,16 @@ const NewChallenge = () => {
         }
       }
     } catch (error) {
-      alert("Error creating challenge. Please try again.");
-      console.error(error);
+      if (error.response?.status === 401) {
+        alert("Unauthorized. Please log in again.");
+        navigate("/login");
+      } else {
+        alert("Error creating challenge. Please try again.");
+      }
+      console.error("Challenge creation error:", error);
     }
   };
+  
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

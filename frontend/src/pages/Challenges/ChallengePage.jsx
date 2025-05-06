@@ -5,21 +5,27 @@ import { Link, useNavigate } from "react-router-dom";
 export default function ChallengePage() {
   const [challenges, setChallenges] = useState([]);
   const navigate = useNavigate();
- // const userId = "user123"; // Replace this with dynamic auth user ID
-
-  useEffect(() => {
-    fetchChallenges();
-  }, []);
+ const userId = "680c69ca2c6262762bea2159"; // Replace this with dynamic auth user ID
 
   const fetchChallenges = async () => {
     try {
-      // const res = await axios.get(`/api/challenges/${userId}`);
+      const token = localStorage.getItem('token'); // ensure token is retrieved correctly
+      const res = await axios.get(`http://localhost:8080/api/challenges/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
       console.log("API response:", res.data);
-      setChallenges(res.data);
+      setChallenges(res.data.challenges || []);
     } catch (err) {
       console.error("Error fetching challenges:", err);
+      setChallenges([]);
     }
   };
+
+  useEffect(() => {
+    fetchChallenges();
+  }, [userId]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this challenge?")) {
