@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config/config';
 import axios from 'axios';
 
 const RecipeList = () => {
@@ -14,51 +15,12 @@ const RecipeList = () => {
   const fetchRecipes = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('token');
       
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:8080/api/recipes', {
+      const response = await fetch(`${API_URL}/api/recipes`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-
-      if (response.status === 403) {
-        // Try to refresh the token
-        const refreshed = await refreshToken();
-        if (refreshed) {
-          // Retry the fetch with new token
-          const newToken = localStorage.getItem('token');
-          const retryResponse = await fetch('http://localhost:8080/api/recipes', {
-            headers: {
-              'Authorization': `Bearer ${newToken}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (!retryResponse.ok) {
-            throw new Error('Failed to fetch recipes after token refresh');
-          }
-          
-          const data = await retryResponse.json();
-          // Initialize isLiked state for each recipe
-          const recipesWithLikeState = data.map(recipe => ({
-            ...recipe,
-            isLiked: recipe.likedByUsers?.includes(user?.id) || false
-          }));
-          setRecipes(recipesWithLikeState);
-          return;
-        } else {
-          // If refresh failed, logout and redirect
-          await logout();
-          navigate('/login');
-          throw new Error('Session expired. Please login again.');
-        }
-      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch recipes');
@@ -101,7 +63,7 @@ const RecipeList = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8080/api/recipes/${recipeId}/like`,
+        `${API_URL}/api/recipes/${recipeId}/like`,
         {},
         {
           headers: {
@@ -139,7 +101,7 @@ const RecipeList = () => {
             // Retry the like with new token
             const newToken = localStorage.getItem('token');
             const retryResponse = await axios.post(
-              `http://localhost:8080/api/recipes/${recipeId}/like`,
+              `${API_URL}/api/recipes/${recipeId}/like`,
               {},
               {
                 headers: {

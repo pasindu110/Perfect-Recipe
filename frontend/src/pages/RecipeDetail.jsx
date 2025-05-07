@@ -19,7 +19,7 @@ const RecipeDetail = () => {
   const [isLiked, setIsLiked] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshToken, logout } = useAuth();
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -27,14 +27,8 @@ const RecipeDetail = () => {
         setIsLoading(true);
         setError(null);
         
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication required');
-        }
-
         const response = await fetch(`${API_URL}/api/recipes/${id}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -42,8 +36,6 @@ const RecipeDetail = () => {
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('Recipe not found');
-          } else if (response.status === 403) {
-            throw new Error('Access denied');
           }
           throw new Error('Failed to load recipe');
         }
@@ -55,9 +47,6 @@ const RecipeDetail = () => {
         console.error('Error fetching recipe:', error);
         setError(error.message);
         toast.error(error.message);
-        if (error.message === 'Authentication required') {
-          navigate('/login');
-        }
       } finally {
         setIsLoading(false);
       }
@@ -137,18 +126,19 @@ const RecipeDetail = () => {
     setIsSubmittingComment(true);
 
     try {
-      console.log('Submitting comment with user details:');
-      console.log('- User ID:', user.id);
-      console.log('- User email:', user.email);
-      console.log('- User full name:', user.fullName);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to comment');
+        navigate('/login');
+        return;
+      }
 
       const formData = new FormData();
       formData.append('userId', user.id);
       formData.append('authorName', user.fullName);
       formData.append('content', newComment);
-      formData.append('rating', rating);
+      formData.append('rating', rating.toString());
 
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/recipes/${id}/comments`, {
         method: 'POST',
         headers: {
@@ -158,18 +148,45 @@ const RecipeDetail = () => {
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          // Try to refresh token
+          const refreshSuccess = await refreshToken();
+          if (refreshSuccess) {
+            // Retry the comment submission with new token
+            const newToken = localStorage.getItem('token');
+            const retryResponse = await fetch(`${API_URL}/api/recipes/${id}/comments`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${newToken}`
+              },
+              body: formData
+            });
+
+            if (retryResponse.ok) {
+              const newCommentData = await retryResponse.json();
+              setComments(prev => [newCommentData, ...prev]);
+              setNewComment('');
+              setRating(0);
+              toast.success('Comment posted successfully!');
+              return;
+            }
+          }
+          throw new Error('Session expired. Please login again.');
+        }
         throw new Error('Failed to post comment');
       }
 
       const newCommentData = await response.json();
-      console.log('New comment data:', newCommentData);
       setComments(prev => [newCommentData, ...prev]);
       setNewComment('');
       setRating(0);
       toast.success('Comment posted successfully!');
     } catch (error) {
       console.error('Error posting comment:', error);
-      toast.error('Failed to post comment');
+      toast.error(error.message);
+      if (error.message.includes('session') || error.message.includes('login')) {
+        await logout();
+      }
     } finally {
       setIsSubmittingComment(false);
     }

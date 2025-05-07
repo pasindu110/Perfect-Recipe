@@ -35,63 +35,62 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        
-        String requestURI = request.getRequestURI();
-        String method = request.getMethod();
-        logger.debug("Processing {} request to: {}", method, requestURI);
-        
-        final String authHeader = request.getHeader("Authorization");
-        logger.debug("Authorization header: {}", authHeader != null ? "present" : "not present");
-        
-        // Skip token validation for preflight requests and public endpoints
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            logger.debug("Skipping authentication for OPTIONS request");
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            logger.debug("No valid JWT token found in request");
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
-            final String jwt = authHeader.substring(7);
-            final String userEmail = jwtUtil.extractUsername(jwt);
-            
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-                
-                if (jwtUtil.isTokenValid(jwt, userDetails)) {
+            String method = request.getMethod();
+            String requestURI = request.getRequestURI();
+            logger.info("Processing request: {} {}", method, requestURI);
+
+            // Skip token validation for OPTIONS requests
+            if (method.equals("OPTIONS")) {
+                logger.info("Skipping token validation for OPTIONS request");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // Skip token validation for public endpoints
+            if (requestURI.startsWith("/api/auth/") ||
+                (requestURI.startsWith("/api/blogs") && method.equals("GET")) ||
+                (requestURI.startsWith("/api/recipes") && method.equals("GET")) ||
+                requestURI.startsWith("/uploads/")) {
+                logger.info("Skipping token validation for public endpoint");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // Get token from header
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                logger.warn("No valid Authorization header found");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"error\":\"No token provided\"}");
+                return;
+            }
+
+            String token = authHeader.substring(7);
+            String username = jwtUtil.extractUsername(token);
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                if (jwtUtil.isTokenValid(token, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                    );
+                            userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    logger.debug("Successfully authenticated user: {} for URI: {}", userEmail, requestURI);
+                    logger.info("Authentication successful for user: {}", username);
                 } else {
-                    logger.warn("Invalid JWT token for user: {} accessing URI: {}", userEmail, requestURI);
-                    sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Invalid or expired token");
+                    logger.warn("Invalid token for user: {}", username);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"error\":\"Invalid token\"}");
                     return;
                 }
             }
-            
+
             filterChain.doFilter(request, response);
         } catch (Exception e) {
-            logger.error("Error processing JWT token for URI {}: {}", requestURI, e.getMessage());
-            sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Invalid token format");
-            return;
+            logger.error("Error processing request", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\":\"Internal server error\"}");
         }
-    }
-
-    private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
-        response.setStatus(status);
-        response.setContentType("application/json");
-        response.getWriter().write(String.format("{\"error\": \"%s\"}", message));
-        response.getWriter().flush();
     }
 
     @Override
@@ -99,6 +98,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return path.startsWith("/api/auth/") || 
                (path.startsWith("/api/blogs") && "GET".equalsIgnoreCase(request.getMethod())) ||
+               (path.startsWith("/api/recipes") && "GET".equalsIgnoreCase(request.getMethod())) ||
                path.startsWith("/uploads/");
     }
 }
