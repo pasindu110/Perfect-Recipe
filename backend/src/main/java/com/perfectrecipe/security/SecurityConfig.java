@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/blogs/*/comments").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/blogs/*/comments").permitAll()
+                .requestMatchers("/api/challenges/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
