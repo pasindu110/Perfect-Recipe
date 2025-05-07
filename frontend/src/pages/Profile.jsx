@@ -3,37 +3,24 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config/config';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
-  const { token, user } = useAuth();
+  const { user, token, refreshToken, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch user data when component mounts
-    fetchUserData();
-  }, []);
-
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/users/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        // Pre-fill form with user data
-        Object.keys(userData).forEach(key => {
-          setValue(key, userData[key]);
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      toast.error('Failed to load user data');
+    if (!user || !token) {
+      navigate('/login');
+      return;
     }
-  };
+    // Pre-fill form with user data from context
+    Object.keys(user).forEach(key => {
+      setValue(key, user[key]);
+    });
+  }, [user, token, setValue, navigate]);
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -44,18 +31,49 @@ const Profile = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        credentials: 'include',
         body: JSON.stringify(data)
       });
 
       if (response.ok) {
+        const updatedUser = await response.json();
+        // Update local storage with new user data
+        localStorage.setItem('user', JSON.stringify(updatedUser));
         toast.success('Profile updated successfully');
+      } else if (response.status === 403) {
+        // Try to refresh token
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          // Retry the update with new token
+          const newToken = localStorage.getItem('token');
+          const retryResponse = await fetch(`${API_URL}/api/users/profile`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${newToken}`
+            },
+            body: JSON.stringify(data)
+          });
+
+          if (retryResponse.ok) {
+            const updatedUser = await retryResponse.json();
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            toast.success('Profile updated successfully');
+          } else {
+            throw new Error('Failed to update profile after token refresh');
+          }
+        } else {
+          throw new Error('Session expired. Please login again.');
+        }
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to update profile');
+        throw new Error(errorData.error || 'Failed to update profile');
       }
     } catch (error) {
-      toast.error('An error occurred');
+      console.error('Error updating profile:', error);
+      toast.error(error.message);
+      if (error.message.includes('session') || error.message.includes('login')) {
+        await logout();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -69,18 +87,44 @@ const Profile = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        credentials: 'include',
         body: JSON.stringify(data)
       });
 
       if (response.ok) {
         toast.success('Password updated successfully');
+      } else if (response.status === 403) {
+        // Try to refresh token
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          // Retry the password change with new token
+          const newToken = localStorage.getItem('token');
+          const retryResponse = await fetch(`${API_URL}/api/users/password`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${newToken}`
+            },
+            body: JSON.stringify(data)
+          });
+
+          if (retryResponse.ok) {
+            toast.success('Password updated successfully');
+          } else {
+            throw new Error('Failed to update password after token refresh');
+          }
+        } else {
+          throw new Error('Session expired. Please login again.');
+        }
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to update password');
+        throw new Error(errorData.error || 'Failed to update password');
       }
     } catch (error) {
-      toast.error('An error occurred');
+      console.error('Error updating password:', error);
+      toast.error(error.message);
+      if (error.message.includes('session') || error.message.includes('login')) {
+        await logout();
+      }
     }
   };
 
