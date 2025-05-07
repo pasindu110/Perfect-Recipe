@@ -86,7 +86,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-12 border-t border-gray-200 pt-8">
           <p className="text-base text-gray-400 text-center">
-            © 2023 PerfectRecipe. All Right Reserved
+            © 2025 PerfectRecipe. All Right Reserved
           </p>
           <div className="mt-4 flex justify-center space-x-6">
             <a href="#" className="text-gray-400 hover:text-primary">

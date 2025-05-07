@@ -49,6 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // Skip token validation for public endpoints
             if (requestURI.startsWith("/api/auth/") ||
+                requestURI.startsWith("/api/about") ||
                 (requestURI.startsWith("/api/blogs") && method.equals("GET")) ||
                 (requestURI.startsWith("/api/recipes") && method.equals("GET")) ||
                 requestURI.startsWith("/uploads/")) {
