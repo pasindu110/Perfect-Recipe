@@ -29,6 +29,7 @@ public class Recipe {
     private String cuisine;
     private List<String> categories;
     private Integer likes;
+    private List<String> likedByUsers;
     private String createdAt;
     private String updatedAt;
     private NutritionFacts nutritionFacts;

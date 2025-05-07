@@ -4,11 +4,16 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Profile from './pages/Profile';
 import AddRecipe from './pages/AddRecipe';
-import RecipeList from './pages/RecipeList';
 import RecipeDetail from './pages/RecipeDetail';
 import EditRecipe from './pages/EditRecipe';
+import RecipeList from './pages/RecipeList';
+import Profile from './pages/Profile';
+import Blogs from './pages/Blogs';
+import AddBlog from './pages/AddBlog';
+import BlogDetail from './pages/BlogDetail';
+import EditBlog from './pages/EditBlog';
+import About from './pages/About';
 import Footer from './components/Footer';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
@@ -24,11 +29,16 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/profile" element={<Profile />} />
             <Route path="/add-recipe" element={<AddRecipe />} />
             <Route path="/recipes" element={<RecipeList />} />
             <Route path="/recipes/:id" element={<RecipeDetail />} />
             <Route path="/recipes/edit/:id" element={<EditRecipe />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/blogs" element={<Blogs />} />
+            <Route path="/add-blog" element={<AddBlog />} />
+            <Route path="/blogs/:id" element={<BlogDetail />} />
+            <Route path="/blogs/:id/edit" element={<EditBlog />} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </main>
         <Footer />
