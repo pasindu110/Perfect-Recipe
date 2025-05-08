@@ -22,7 +22,7 @@ export default function ChallengePage() {
       }
     });
       console.log("API response:", res.data);
-      setChallenges(res.data.challenges || []);
+      setChallenges(res.data || []);
     } catch (err) {
       console.error("Error fetching challenges:", err);
       setChallenges([]);

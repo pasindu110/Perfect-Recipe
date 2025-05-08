@@ -57,7 +57,7 @@ const NewChallenge = () => {
         if (isActiveNow) {
           navigate(`/challenge/${challengeId}/start`);
         } else {
-          navigate("/challenges");
+          navigate("/challenges/${userId}");
         }
       }
     } catch (error) {

@@ -10,6 +10,7 @@ export default function ActiveChallenge() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [showUploadSection, setShowUploadSection] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const [timerInterval, setTimerInterval] = useState(null);
@@ -66,23 +67,43 @@ export default function ActiveChallenge() {
     return `${hrs}h ${mins}m ${secs}s`;
   };
 
+  // const handleFinish = async () => {
+  //   try {
+  //     setIsUploading(true);
+  //     clearInterval(timerInterval); // Stop the timer if running
+  
+  //     const uploadedImages = images.map((file) => URL.createObjectURL(file)); // Replace with real URLs if needed
+  
+  //     await axios.put(`http://localhost:8080/api/challenges/${id}/finish`, uploadedImages); // Call backend to mark as completed
+  //     console.log("Challenge marked as completed and images uploaded");
+  //   } catch (err) {
+  //     console.error("Error finishing challenge:", err);
+  //   }
+  // };
+
   const handleFinish = async () => {
     try {
       setIsUploading(true);
       clearInterval(timerInterval); // Stop the timer if running
   
-      const uploadedImages = images.map((file) => URL.createObjectURL(file)); // Replace with real URLs if needed
+      const uploadedImages = images.map((file) => URL.createObjectURL(file));
+
+      await axios.put(
+        `http://localhost:8080/api/challenges/${id}/finish`,
+        uploadedImages, // Send as object (adjust based on backend expectations)
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
   
-      await axios.put(`http://localhost:8080/api/challenges/${id}/finish`, uploadedImages); // Call backend to mark as completed
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
       console.log("Challenge marked as completed and images uploaded");
     } catch (err) {
       console.error("Error finishing challenge:", err);
     }
   };
-
+  
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 5) {
@@ -93,7 +114,7 @@ export default function ActiveChallenge() {
     setSuccess(true);
   
     setTimeout(() => {
-      navigate(`http://localhost:8080/api/challenges/${userId}`);
+      navigate(`/challenges/${userId}`);
     }, 3000);
   };
 

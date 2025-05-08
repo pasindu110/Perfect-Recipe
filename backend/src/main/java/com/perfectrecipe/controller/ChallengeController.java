@@ -20,7 +20,7 @@ public class ChallengeController {
     @GetMapping("/{userId}")
     public List<Challenge> getUserChallenges(@PathVariable String userId) {
         return challengeService.getChallengesByUser(userId);
-    } 
+    }
 
     // Get all challenges
     @GetMapping("/{id}/all")
