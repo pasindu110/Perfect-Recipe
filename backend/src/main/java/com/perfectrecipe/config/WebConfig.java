@@ -6,6 +6,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.io.File;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -18,9 +19,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .resourceChain(true);
                 
         // Serve uploaded files
-        String uploadDir = Paths.get("uploads").toAbsolutePath().toString();
+        String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadDir + "/")
+                .addResourceLocations("file:" + uploadDir + File.separator)
                 .setCachePeriod(3600)
                 .resourceChain(true);
     }

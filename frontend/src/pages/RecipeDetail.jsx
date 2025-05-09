@@ -406,6 +406,15 @@ const RecipeDetail = () => {
     return '/default-recipe-image.jpg';
   };
 
+  // Helper to extract YouTube video ID
+  const extractYouTubeId = (url) => {
+    const regExp = /^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[1].length === 11) ? match[1] : null;
+  };
+
+  console.log('Recipe object:', recipe);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -465,6 +474,7 @@ const RecipeDetail = () => {
                 e.target.onerror = null;
               }}
             />
+            
             <div className="flex justify-between items-center">
               <div className="flex space-x-6">
                 <div className="text-center">
@@ -523,7 +533,32 @@ const RecipeDetail = () => {
               </div>
             </div>
           </div>
-
+                {/* Video Section */}
+                            {recipe.videoUrl && (
+                              <section className="mb-8">
+                                <h2 className="text-2xl font-bold mb-2">Video</h2>
+                                {extractYouTubeId(recipe.videoUrl) ? (
+                                  <iframe
+                                    width="480"
+                                    height="270"
+                                    src={`https://www.youtube.com/embed/${extractYouTubeId(recipe.videoUrl)}`}
+                                    frameBorder="0"
+                                    allow="autoplay; encrypted-media"
+                                    allowFullScreen
+                                    title="Recipe video"
+                                    className="rounded"
+                                  />
+                                ) : (
+                                  <video
+                                    src={`http://localhost:8080${recipe.videoUrl}`}
+                                    controls
+                                    width="480"
+                                    height="270"
+                                    className="rounded"
+                                  />
+                                )}
+                              </section>
+                            )}
           {/* Ingredients */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4">Ingredients:</h2>

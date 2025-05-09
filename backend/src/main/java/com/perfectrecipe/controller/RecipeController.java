@@ -21,10 +21,15 @@ import java.util.Optional;
 import com.perfectrecipe.model.User;
 import com.perfectrecipe.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
+import java.io.File;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/recipes")
 public class RecipeController {
+
+    @Value("${app.upload.video-dir}")
+    private String UPLOAD_DIR;
 
     @Autowired
     private RecipeRepository recipeRepository;
@@ -37,6 +42,20 @@ public class RecipeController {
 
     @Autowired
     private UserRepository userRepository;
+
+    private void ensureUploadDirectoryExists() {
+        try {
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                boolean created = uploadDir.mkdirs();
+                if (!created) {
+                    throw new RuntimeException("Failed to create upload directory: " + UPLOAD_DIR);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error creating upload directory: " + e.getMessage(), e);
+        }
+    }
 
     @GetMapping
     public List<Recipe> getAllRecipes() {
@@ -68,7 +87,9 @@ public class RecipeController {
             @RequestParam("nutritionFacts") String nutritionFacts,
             @RequestParam("userId") String userId,
             @RequestParam("author") String author,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "video", required = false) MultipartFile video,
+            @RequestParam(value = "videoUrl", required = false) String videoUrl) {
         try {
             System.out.println("Received recipe creation request");
             Recipe recipe = new Recipe();
@@ -103,6 +124,34 @@ public class RecipeController {
                 recipe.setImage(null);
             }
             
+            if (video != null && !video.isEmpty()) {
+                try {
+                    if (video.getSize() > 30 * 1024 * 1024) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Video size should not exceed 30MB");
+                    }
+                    
+                    ensureUploadDirectoryExists();
+                    
+                    String videoFileName = System.currentTimeMillis() + "_" + video.getOriginalFilename();
+                    File videoFile = new File(UPLOAD_DIR, videoFileName);
+                    
+                    // Ensure parent directories exist
+                    if (!videoFile.getParentFile().exists()) {
+                        videoFile.getParentFile().mkdirs();
+                    }
+                    
+                    video.transferTo(videoFile);
+                    recipe.setVideoUrl("/uploads/videos/" + videoFileName);
+                } catch (Exception e) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error processing video: " + e.getMessage());
+                }
+            }
+            
+            if (videoUrl != null && !videoUrl.isEmpty()) {
+                recipe.setVideoUrl(videoUrl);
+            }
+            
             recipe.setCreatedAt(java.time.LocalDateTime.now().toString());
             recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
             Recipe savedRecipe = recipeRepository.save(recipe);
@@ -129,6 +178,8 @@ public class RecipeController {
             @PathVariable String id,
             @RequestParam("recipeData") String recipeDataJson,
             @RequestPart(value = "file", required = false) MultipartFile image,
+            @RequestPart(value = "video", required = false) MultipartFile video,
+            @RequestParam(value = "videoUrl", required = false) String videoUrl,
             Authentication authentication) {
         try {
             // Check authentication
@@ -167,18 +218,44 @@ public class RecipeController {
                                         .status(HttpStatus.BAD_REQUEST)
                                         .body("Invalid file type. Only images are allowed.");
                                 }
-                                
                                 // Check file size (limit to 5MB)
                                 if (image.getSize() > 5 * 1024 * 1024) {
                                     return ResponseEntity
                                         .status(HttpStatus.BAD_REQUEST)
                                         .body("Image size should not exceed 5MB");
                                 }
-                                
                                 // Convert image to base64 with proper content type
-                                String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
+                                String base64Image = java.util.Base64.getEncoder().encodeToString(image.getBytes());
                                 String imageWithPrefix = "data:" + contentType + ";base64," + base64Image;
                                 recipe.setImage(imageWithPrefix);
+                            }
+
+                            if (video != null && !video.isEmpty()) {
+                                try {
+                                    if (video.getSize() > 30 * 1024 * 1024) {
+                                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Video size should not exceed 30MB");
+                                    }
+                                    
+                                    ensureUploadDirectoryExists();
+                                    
+                                    String videoFileName = System.currentTimeMillis() + "_" + video.getOriginalFilename();
+                                    File videoFile = new File(UPLOAD_DIR, videoFileName);
+                                    
+                                    // Ensure parent directories exist
+                                    if (!videoFile.getParentFile().exists()) {
+                                        videoFile.getParentFile().mkdirs();
+                                    }
+                                    
+                                    video.transferTo(videoFile);
+                                    recipe.setVideoUrl("/uploads/videos/" + videoFileName);
+                                } catch (Exception e) {
+                                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body("Error processing video: " + e.getMessage());
+                                }
+                            }
+
+                            if (videoUrl != null && !videoUrl.isEmpty()) {
+                                recipe.setVideoUrl(videoUrl);
                             }
 
                             return ResponseEntity.ok(recipeRepository.save(recipe));

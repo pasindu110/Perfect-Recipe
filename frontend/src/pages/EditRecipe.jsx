@@ -25,8 +25,13 @@ const EditRecipe = () => {
       protein: '',
       carbs: '',
       fat: ''
-    }
+    },
+    videoUrl: ''
   });
+  const [videoType, setVideoType] = useState(recipe.videoUrl && recipe.videoUrl.includes('youtube.com') ? 'youtube' : 'file');
+  const [recipeVideo, setRecipeVideo] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [youtubeLink, setYoutubeLink] = useState(recipe.videoUrl || '');
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -152,6 +157,18 @@ const EditRecipe = () => {
     }
   };
 
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 30 * 1024 * 1024) {
+        toast.error('Video size should not exceed 30MB');
+        return;
+      }
+      setRecipeVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
+    }
+  };
+
   // Clean up preview URL when component unmounts
   useEffect(() => {
     return () => {
@@ -219,6 +236,13 @@ const EditRecipe = () => {
         
         // Add the image file
         formData.append('file', recipe.image);
+
+        if (videoType === 'file' && recipeVideo) {
+          formData.append('video', recipeVideo);
+        }
+        if (videoType === 'youtube' && youtubeLink) {
+          formData.append('videoUrl', youtubeLink);
+        }
 
         response = await fetch(`${API_URL}/api/recipes/${id}`, {
           method: 'PUT',
@@ -446,6 +470,66 @@ const EditRecipe = () => {
           </div>
         </div>
 
+        {/* Video */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">Recipe Video</h2>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Recipe video (max 30MB, 30 seconds) or YouTube link:
+            </label>
+            <div className="flex gap-4 mb-2">
+              <label>
+                <input
+                  type="radio"
+                  checked={videoType === 'file'}
+                  onChange={() => setVideoType('file')}
+                /> Upload File
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={videoType === 'youtube'}
+                  onChange={() => setVideoType('youtube')}
+                /> YouTube Link
+              </label>
+            </div>
+            {videoType === 'file' ? (
+              <>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="w-full px-4 py-2 border rounded-md"
+                />
+                {videoPreview ? (
+                  <video
+                    src={videoPreview}
+                    controls
+                    width="320"
+                    height="180"
+                    className="mt-2 rounded"
+                  />
+                ) : recipe.videoUrl && !recipe.videoUrl.includes('youtube.com') ? (
+                  <video
+                    src={`http://localhost:8080${recipe.videoUrl}`}
+                    controls
+                    width="320"
+                    height="180"
+                    className="mt-2 rounded"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <input
+                type="text"
+                value={youtubeLink}
+                onChange={e => setYoutubeLink(e.target.value)}
+                placeholder="Paste YouTube link here"
+                className="w-full px-4 py-2 border rounded-md"
+              />
+            )}
+          </div>
+        </div>
 
         {/* Submit Button */}
         <div className="flex justify-end space-x-4">
