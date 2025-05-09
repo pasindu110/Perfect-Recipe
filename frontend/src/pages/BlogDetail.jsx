@@ -240,8 +240,8 @@ const BlogDetail = () => {
           <h1 className="text-4xl font-bold mb-4">{blog.title}</h1>
           <div className="flex items-center text-gray-600 mb-4">
             <span className="font-medium">
-              By {blog.user?.name || blog.user?.displayName || blog.user?.fullName || user?.name || 'Anonymous'}
-              {isAuthor && ' (You)'}
+              By {blog.user?.fullName || blog.user?.name || blog.authorName || blog.author || "Anonymous"}
+              {isAuthor ? " (You)" : ""}
             </span>
             <span className="mx-2">•</span>
             <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
