@@ -33,6 +33,7 @@ public class Recipe {
     private String createdAt;
     private String updatedAt;
     private NutritionFacts nutritionFacts;
+    private String videoUrl;
 
     @Data
     @NoArgsConstructor

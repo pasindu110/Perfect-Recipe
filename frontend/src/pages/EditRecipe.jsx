@@ -25,8 +25,13 @@ const EditRecipe = () => {
       protein: '',
       carbs: '',
       fat: ''
-    }
+    },
+    videoUrl: ''
   });
+  const [videoType, setVideoType] = useState(recipe.videoUrl && recipe.videoUrl.includes('youtube.com') ? 'youtube' : 'file');
+  const [recipeVideo, setRecipeVideo] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [youtubeLink, setYoutubeLink] = useState(recipe.videoUrl || '');
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -142,11 +147,61 @@ const EditRecipe = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Create a preview URL for the image
+      const previewUrl = URL.createObjectURL(file);
       setRecipe(prev => ({
         ...prev,
-        image: file
+        image: file,
+        imagePreview: previewUrl
       }));
     }
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 30 * 1024 * 1024) {
+        toast.error('Video size should not exceed 30MB');
+        return;
+      }
+      setRecipeVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Clean up preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (recipe.imagePreview) {
+        URL.revokeObjectURL(recipe.imagePreview);
+      }
+    };
+  }, [recipe.imagePreview]);
+
+  const getImageSrc = (imageData) => {
+    if (!imageData) return '/default-recipe-image.jpg';
+    
+    // If it's a preview URL, return it
+    if (typeof imageData === 'string' && imageData.startsWith('blob:')) {
+      return imageData;
+    }
+    
+    // If it's already a data URL, return it
+    if (typeof imageData === 'string' && imageData.startsWith('data:image')) {
+      return imageData;
+    }
+    
+    // If it's a URL, return it
+    if (typeof imageData === 'string' && imageData.startsWith('http')) {
+      return imageData;
+    }
+    
+    // If it's a base64 string without prefix, try to add the prefix
+    if (typeof imageData === 'string' && /^[A-Za-z0-9+/=]+$/.test(imageData)) {
+      return `data:image/jpeg;base64,${imageData}`;
+    }
+    
+    return '/default-recipe-image.jpg';
   };
 
   const handleSubmit = async (e) => {
@@ -165,7 +220,9 @@ const EditRecipe = () => {
         cookTime: recipe.cookTime,
         servings: recipe.servings,
         ingredients: recipe.ingredients,
-        instructions: recipe.instructions
+        instructions: recipe.instructions,
+        cuisine: recipe.cuisine,
+        categories: recipe.categories
       };
 
       let response;
@@ -180,9 +237,11 @@ const EditRecipe = () => {
         // Add the image file
         formData.append('file', recipe.image);
 
-        console.log('Sending FormData with image:');
-        for (let pair of formData.entries()) {
-          console.log(pair[0] + ': ' + pair[1]);
+        if (videoType === 'file' && recipeVideo) {
+          formData.append('video', recipeVideo);
+        }
+        if (videoType === 'youtube' && youtubeLink) {
+          formData.append('videoUrl', youtubeLink);
         }
 
         response = await fetch(`${API_URL}/api/recipes/${id}`, {
@@ -194,8 +253,6 @@ const EditRecipe = () => {
         });
       } else {
         // If no new image, send as JSON
-        console.log('Sending JSON data:', recipeData);
-
         response = await fetch(`${API_URL}/api/recipes/${id}`, {
           method: 'PUT',
           headers: {
@@ -206,13 +263,8 @@ const EditRecipe = () => {
         });
       }
 
-      // Log the response status and headers
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Error response:', errorData);
         throw new Error(errorData.message || `Failed to update recipe. Status: ${response.status}`);
       }
 
@@ -220,7 +272,6 @@ const EditRecipe = () => {
       navigate(`/recipes/${id}`);
     } catch (error) {
       console.error('Error updating recipe:', error);
-      console.error('Error stack:', error.stack);
       toast.error(error.message || 'Failed to update recipe');
     } finally {
       setIsSubmitting(false);
@@ -335,9 +386,9 @@ const EditRecipe = () => {
                 onChange={handleImageChange}
                 className="w-full px-4 py-2 border rounded-md focus:ring-rose-500 focus:border-rose-500"
               />
-              {recipe.image && !(recipe.image instanceof File) && (
+              {(recipe.imagePreview || recipe.image) && (
                 <img
-                  src={recipe.image}
+                  src={getImageSrc(recipe.imagePreview || recipe.image)}
                   alt="Current recipe"
                   className="mt-2 h-32 w-32 object-cover rounded"
                 />
@@ -419,6 +470,66 @@ const EditRecipe = () => {
           </div>
         </div>
 
+        {/* Video */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">Recipe Video</h2>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Recipe video (max 30MB, 30 seconds) or YouTube link:
+            </label>
+            <div className="flex gap-4 mb-2">
+              <label>
+                <input
+                  type="radio"
+                  checked={videoType === 'file'}
+                  onChange={() => setVideoType('file')}
+                /> Upload File
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={videoType === 'youtube'}
+                  onChange={() => setVideoType('youtube')}
+                /> YouTube Link
+              </label>
+            </div>
+            {videoType === 'file' ? (
+              <>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="w-full px-4 py-2 border rounded-md"
+                />
+                {videoPreview ? (
+                  <video
+                    src={videoPreview}
+                    controls
+                    width="320"
+                    height="180"
+                    className="mt-2 rounded"
+                  />
+                ) : recipe.videoUrl && !recipe.videoUrl.includes('youtube.com') ? (
+                  <video
+                    src={`http://localhost:8080${recipe.videoUrl}`}
+                    controls
+                    width="320"
+                    height="180"
+                    className="mt-2 rounded"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <input
+                type="text"
+                value={youtubeLink}
+                onChange={e => setYoutubeLink(e.target.value)}
+                placeholder="Paste YouTube link here"
+                className="w-full px-4 py-2 border rounded-md"
+              />
+            )}
+          </div>
+        </div>
 
         {/* Submit Button */}
         <div className="flex justify-end space-x-4">

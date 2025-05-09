@@ -20,10 +20,16 @@ import java.util.ArrayList;
 import java.util.Optional;
 import com.perfectrecipe.model.User;
 import com.perfectrecipe.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.io.File;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/recipes")
 public class RecipeController {
+
+    @Value("${app.upload.video-dir}")
+    private String UPLOAD_DIR;
 
     @Autowired
     private RecipeRepository recipeRepository;
@@ -36,6 +42,20 @@ public class RecipeController {
 
     @Autowired
     private UserRepository userRepository;
+
+    private void ensureUploadDirectoryExists() {
+        try {
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                boolean created = uploadDir.mkdirs();
+                if (!created) {
+                    throw new RuntimeException("Failed to create upload directory: " + UPLOAD_DIR);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error creating upload directory: " + e.getMessage(), e);
+        }
+    }
 
     @GetMapping
     public List<Recipe> getAllRecipes() {
@@ -67,7 +87,9 @@ public class RecipeController {
             @RequestParam("nutritionFacts") String nutritionFacts,
             @RequestParam("userId") String userId,
             @RequestParam("author") String author,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "video", required = false) MultipartFile video,
+            @RequestParam(value = "videoUrl", required = false) String videoUrl) {
         try {
             System.out.println("Received recipe creation request");
             Recipe recipe = new Recipe();
@@ -102,6 +124,34 @@ public class RecipeController {
                 recipe.setImage(null);
             }
             
+            if (video != null && !video.isEmpty()) {
+                try {
+                    if (video.getSize() > 30 * 1024 * 1024) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Video size should not exceed 30MB");
+                    }
+                    
+                    ensureUploadDirectoryExists();
+                    
+                    String videoFileName = System.currentTimeMillis() + "_" + video.getOriginalFilename();
+                    File videoFile = new File(UPLOAD_DIR, videoFileName);
+                    
+                    // Ensure parent directories exist
+                    if (!videoFile.getParentFile().exists()) {
+                        videoFile.getParentFile().mkdirs();
+                    }
+                    
+                    video.transferTo(videoFile);
+                    recipe.setVideoUrl("/uploads/videos/" + videoFileName);
+                } catch (Exception e) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error processing video: " + e.getMessage());
+                }
+            }
+            
+            if (videoUrl != null && !videoUrl.isEmpty()) {
+                recipe.setVideoUrl(videoUrl);
+            }
+            
             recipe.setCreatedAt(java.time.LocalDateTime.now().toString());
             recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
             Recipe savedRecipe = recipeRepository.save(recipe);
@@ -123,13 +173,126 @@ public class RecipeController {
             .body("Missing required request part: " + ex.getRequestPartName());
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Recipe> updateRecipe(@PathVariable String id, @RequestBody Recipe recipeDetails) {
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateRecipeWithImage(
+            @PathVariable String id,
+            @RequestParam("recipeData") String recipeDataJson,
+            @RequestPart(value = "file", required = false) MultipartFile image,
+            @RequestPart(value = "video", required = false) MultipartFile video,
+            @RequestParam(value = "videoUrl", required = false) String videoUrl,
+            Authentication authentication) {
+        try {
+            // Check authentication
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("User not authenticated");
+            }
+            String userEmail = authentication.getName();
+            // Find user by email
+            User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+            return recipeRepository.findById(id)
+                    .map(recipe -> {
+                        // Only allow the owner to update
+                        if (!recipe.getUserId().equals(user.getId())) {
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You can only update your own recipes");
+                        }
+                        try {
+                            Recipe recipeDetails = objectMapper.readValue(recipeDataJson, Recipe.class);
+                            
+                            recipe.setTitle(recipeDetails.getTitle());
+                            recipe.setDescription(recipeDetails.getDescription());
+                            recipe.setIngredients(recipeDetails.getIngredients());
+                            recipe.setInstructions(recipeDetails.getInstructions());
+                            recipe.setPrepTime(recipeDetails.getPrepTime());
+                            recipe.setCookTime(recipeDetails.getCookTime());
+                            recipe.setServings(recipeDetails.getServings());
+                            recipe.setCuisine(recipeDetails.getCuisine());
+                            recipe.setCategories(recipeDetails.getCategories());
+                            recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+
+                            if (image != null && !image.isEmpty()) {
+                                String contentType = image.getContentType();
+                                if (contentType == null || !contentType.startsWith("image/")) {
+                                    return ResponseEntity
+                                        .status(HttpStatus.BAD_REQUEST)
+                                        .body("Invalid file type. Only images are allowed.");
+                                }
+                                // Check file size (limit to 5MB)
+                                if (image.getSize() > 5 * 1024 * 1024) {
+                                    return ResponseEntity
+                                        .status(HttpStatus.BAD_REQUEST)
+                                        .body("Image size should not exceed 5MB");
+                                }
+                                // Convert image to base64 with proper content type
+                                String base64Image = java.util.Base64.getEncoder().encodeToString(image.getBytes());
+                                String imageWithPrefix = "data:" + contentType + ";base64," + base64Image;
+                                recipe.setImage(imageWithPrefix);
+                            }
+
+                            if (video != null && !video.isEmpty()) {
+                                try {
+                                    if (video.getSize() > 30 * 1024 * 1024) {
+                                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Video size should not exceed 30MB");
+                                    }
+                                    
+                                    ensureUploadDirectoryExists();
+                                    
+                                    String videoFileName = System.currentTimeMillis() + "_" + video.getOriginalFilename();
+                                    File videoFile = new File(UPLOAD_DIR, videoFileName);
+                                    
+                                    // Ensure parent directories exist
+                                    if (!videoFile.getParentFile().exists()) {
+                                        videoFile.getParentFile().mkdirs();
+                                    }
+                                    
+                                    video.transferTo(videoFile);
+                                    recipe.setVideoUrl("/uploads/videos/" + videoFileName);
+                                } catch (Exception e) {
+                                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body("Error processing video: " + e.getMessage());
+                                }
+                            }
+
+                            if (videoUrl != null && !videoUrl.isEmpty()) {
+                                recipe.setVideoUrl(videoUrl);
+                            }
+
+                            return ResponseEntity.ok(recipeRepository.save(recipe));
+                        } catch (Exception e) {
+                            return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body("Error processing recipe data: " + e.getMessage());
+                        }
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("Error processing request: " + e.getMessage());
+        }
+    }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateRecipeJson(
+            @PathVariable String id,
+            @RequestBody Recipe recipeDetails,
+            Authentication authentication) {
+        // Check authentication
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("User not authenticated");
+        }
+        String userEmail = authentication.getName();
+        User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
         return recipeRepository.findById(id)
                 .map(recipe -> {
+                    if (!recipe.getUserId().equals(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You can only update your own recipes");
+                    }
                     recipe.setTitle(recipeDetails.getTitle());
                     recipe.setDescription(recipeDetails.getDescription());
-                    recipe.setImage(recipeDetails.getImage());
                     recipe.setIngredients(recipeDetails.getIngredients());
                     recipe.setInstructions(recipeDetails.getInstructions());
                     recipe.setPrepTime(recipeDetails.getPrepTime());
@@ -138,6 +301,7 @@ public class RecipeController {
                     recipe.setCuisine(recipeDetails.getCuisine());
                     recipe.setCategories(recipeDetails.getCategories());
                     recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+                    // Do not update image here!
                     return ResponseEntity.ok(recipeRepository.save(recipe));
                 })
                 .orElse(ResponseEntity.notFound().build());

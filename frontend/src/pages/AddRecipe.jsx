@@ -9,6 +9,10 @@ const AddRecipe = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recipeImage, setRecipeImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [recipeVideo, setRecipeVideo] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [videoType, setVideoType] = useState('file'); // 'file' or 'youtube'
+  const [youtubeLink, setYoutubeLink] = useState('');
   const navigate = useNavigate();
   const { user, logout, refreshToken } = useAuth();
   
@@ -40,6 +44,18 @@ const AddRecipe = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 30 * 1024 * 1024) {
+        toast.error('Video size should not exceed 30MB');
+        return;
+      }
+      setRecipeVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
     }
   };
 
@@ -76,6 +92,14 @@ const AddRecipe = () => {
       // Handle image
       if (recipeImage && recipeImage instanceof File) {
         formData.append('image', recipeImage);
+      }
+
+      // Handle video
+      if (videoType === 'file' && recipeVideo) {
+        formData.append('video', recipeVideo);
+      }
+      if (videoType === 'youtube' && youtubeLink) {
+        formData.append('videoUrl', youtubeLink);
       }
 
       // Add user information
@@ -227,6 +251,56 @@ const AddRecipe = () => {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Recipe Video */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Recipe video (max 30MB, 30 seconds) or YouTube link:
+            </label>
+            <div className="flex gap-4 mb-2">
+              <label>
+                <input
+                  type="radio"
+                  checked={videoType === 'file'}
+                  onChange={() => setVideoType('file')}
+                /> Upload File
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={videoType === 'youtube'}
+                  onChange={() => setVideoType('youtube')}
+                /> YouTube Link
+              </label>
+            </div>
+            {videoType === 'file' ? (
+              <>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  className="w-full px-4 py-2 border rounded-md"
+                />
+                {videoPreview && (
+                  <video
+                    src={videoPreview}
+                    controls
+                    width="320"
+                    height="180"
+                    className="mt-2 rounded"
+                  />
+                )}
+              </>
+            ) : (
+              <input
+                type="text"
+                value={youtubeLink}
+                onChange={e => setYoutubeLink(e.target.value)}
+                placeholder="Paste YouTube link here"
+                className="w-full px-4 py-2 border rounded-md"
+              />
+            )}
           </div>
 
           {/* Description */}
