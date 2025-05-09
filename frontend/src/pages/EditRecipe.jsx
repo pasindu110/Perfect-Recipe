@@ -142,11 +142,49 @@ const EditRecipe = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Create a preview URL for the image
+      const previewUrl = URL.createObjectURL(file);
       setRecipe(prev => ({
         ...prev,
-        image: file
+        image: file,
+        imagePreview: previewUrl
       }));
     }
+  };
+
+  // Clean up preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (recipe.imagePreview) {
+        URL.revokeObjectURL(recipe.imagePreview);
+      }
+    };
+  }, [recipe.imagePreview]);
+
+  const getImageSrc = (imageData) => {
+    if (!imageData) return '/default-recipe-image.jpg';
+    
+    // If it's a preview URL, return it
+    if (typeof imageData === 'string' && imageData.startsWith('blob:')) {
+      return imageData;
+    }
+    
+    // If it's already a data URL, return it
+    if (typeof imageData === 'string' && imageData.startsWith('data:image')) {
+      return imageData;
+    }
+    
+    // If it's a URL, return it
+    if (typeof imageData === 'string' && imageData.startsWith('http')) {
+      return imageData;
+    }
+    
+    // If it's a base64 string without prefix, try to add the prefix
+    if (typeof imageData === 'string' && /^[A-Za-z0-9+/=]+$/.test(imageData)) {
+      return `data:image/jpeg;base64,${imageData}`;
+    }
+    
+    return '/default-recipe-image.jpg';
   };
 
   const handleSubmit = async (e) => {
@@ -165,7 +203,9 @@ const EditRecipe = () => {
         cookTime: recipe.cookTime,
         servings: recipe.servings,
         ingredients: recipe.ingredients,
-        instructions: recipe.instructions
+        instructions: recipe.instructions,
+        cuisine: recipe.cuisine,
+        categories: recipe.categories
       };
 
       let response;
@@ -180,11 +220,6 @@ const EditRecipe = () => {
         // Add the image file
         formData.append('file', recipe.image);
 
-        console.log('Sending FormData with image:');
-        for (let pair of formData.entries()) {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
-
         response = await fetch(`${API_URL}/api/recipes/${id}`, {
           method: 'PUT',
           headers: {
@@ -194,8 +229,6 @@ const EditRecipe = () => {
         });
       } else {
         // If no new image, send as JSON
-        console.log('Sending JSON data:', recipeData);
-
         response = await fetch(`${API_URL}/api/recipes/${id}`, {
           method: 'PUT',
           headers: {
@@ -206,13 +239,8 @@ const EditRecipe = () => {
         });
       }
 
-      // Log the response status and headers
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Error response:', errorData);
         throw new Error(errorData.message || `Failed to update recipe. Status: ${response.status}`);
       }
 
@@ -220,7 +248,6 @@ const EditRecipe = () => {
       navigate(`/recipes/${id}`);
     } catch (error) {
       console.error('Error updating recipe:', error);
-      console.error('Error stack:', error.stack);
       toast.error(error.message || 'Failed to update recipe');
     } finally {
       setIsSubmitting(false);
@@ -335,9 +362,9 @@ const EditRecipe = () => {
                 onChange={handleImageChange}
                 className="w-full px-4 py-2 border rounded-md focus:ring-rose-500 focus:border-rose-500"
               />
-              {recipe.image && !(recipe.image instanceof File) && (
+              {(recipe.imagePreview || recipe.image) && (
                 <img
-                  src={recipe.image}
+                  src={getImageSrc(recipe.imagePreview || recipe.image)}
                   alt="Current recipe"
                   className="mt-2 h-32 w-32 object-cover rounded"
                 />

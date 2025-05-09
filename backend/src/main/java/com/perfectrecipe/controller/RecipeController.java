@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import com.perfectrecipe.model.User;
 import com.perfectrecipe.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
 @RequestMapping("/api/recipes")
@@ -123,13 +124,98 @@ public class RecipeController {
             .body("Missing required request part: " + ex.getRequestPartName());
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Recipe> updateRecipe(@PathVariable String id, @RequestBody Recipe recipeDetails) {
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateRecipeWithImage(
+            @PathVariable String id,
+            @RequestParam("recipeData") String recipeDataJson,
+            @RequestPart(value = "file", required = false) MultipartFile image,
+            Authentication authentication) {
+        try {
+            // Check authentication
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("User not authenticated");
+            }
+            String userEmail = authentication.getName();
+            // Find user by email
+            User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+            return recipeRepository.findById(id)
+                    .map(recipe -> {
+                        // Only allow the owner to update
+                        if (!recipe.getUserId().equals(user.getId())) {
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You can only update your own recipes");
+                        }
+                        try {
+                            Recipe recipeDetails = objectMapper.readValue(recipeDataJson, Recipe.class);
+                            
+                            recipe.setTitle(recipeDetails.getTitle());
+                            recipe.setDescription(recipeDetails.getDescription());
+                            recipe.setIngredients(recipeDetails.getIngredients());
+                            recipe.setInstructions(recipeDetails.getInstructions());
+                            recipe.setPrepTime(recipeDetails.getPrepTime());
+                            recipe.setCookTime(recipeDetails.getCookTime());
+                            recipe.setServings(recipeDetails.getServings());
+                            recipe.setCuisine(recipeDetails.getCuisine());
+                            recipe.setCategories(recipeDetails.getCategories());
+                            recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+
+                            if (image != null && !image.isEmpty()) {
+                                String contentType = image.getContentType();
+                                if (contentType == null || !contentType.startsWith("image/")) {
+                                    return ResponseEntity
+                                        .status(HttpStatus.BAD_REQUEST)
+                                        .body("Invalid file type. Only images are allowed.");
+                                }
+                                
+                                // Check file size (limit to 5MB)
+                                if (image.getSize() > 5 * 1024 * 1024) {
+                                    return ResponseEntity
+                                        .status(HttpStatus.BAD_REQUEST)
+                                        .body("Image size should not exceed 5MB");
+                                }
+                                
+                                // Convert image to base64 with proper content type
+                                String base64Image = Base64.getEncoder().encodeToString(image.getBytes());
+                                String imageWithPrefix = "data:" + contentType + ";base64," + base64Image;
+                                recipe.setImage(imageWithPrefix);
+                            }
+
+                            return ResponseEntity.ok(recipeRepository.save(recipe));
+                        } catch (Exception e) {
+                            return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body("Error processing recipe data: " + e.getMessage());
+                        }
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("Error processing request: " + e.getMessage());
+        }
+    }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateRecipeJson(
+            @PathVariable String id,
+            @RequestBody Recipe recipeDetails,
+            Authentication authentication) {
+        // Check authentication
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("User not authenticated");
+        }
+        String userEmail = authentication.getName();
+        User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
         return recipeRepository.findById(id)
                 .map(recipe -> {
+                    if (!recipe.getUserId().equals(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You can only update your own recipes");
+                    }
                     recipe.setTitle(recipeDetails.getTitle());
                     recipe.setDescription(recipeDetails.getDescription());
-                    recipe.setImage(recipeDetails.getImage());
                     recipe.setIngredients(recipeDetails.getIngredients());
                     recipe.setInstructions(recipeDetails.getInstructions());
                     recipe.setPrepTime(recipeDetails.getPrepTime());
@@ -138,6 +224,7 @@ public class RecipeController {
                     recipe.setCuisine(recipeDetails.getCuisine());
                     recipe.setCategories(recipeDetails.getCategories());
                     recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+                    // Do not update image here!
                     return ResponseEntity.ok(recipeRepository.save(recipe));
                 })
                 .orElse(ResponseEntity.notFound().build());
