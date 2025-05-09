@@ -7,6 +7,7 @@ export default function ChallengePage() {
   const [challenges, setChallenges] = useState([]);
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  // const [recipes, setRecipes] = useState([]);
   const userId = user?.id;// Replace this with dynamic auth user ID
 //   const userId = "680c69ca2c6262762bea2159"; 
 // const userId = user?.id;
@@ -21,7 +22,7 @@ export default function ChallengePage() {
         Authorization: `Bearer ${token}`
       }
     });
-      console.log("API response:", res.data);
+      console.log("Challenges:", res.data);
       setChallenges(res.data || []);
     } catch (err) {
       console.error("Error fetching challenges:", err);
@@ -34,7 +35,37 @@ export default function ChallengePage() {
       fetchChallenges();
     }
   }, [userId, token, navigate]);
+
+  useEffect(() => {
+    if (token) {
+      fetchChallenges();
+    }
+  }, [userId, token]);
+
+  // useEffect(() => {
+  //   if (token) {
+  //     fetchRecipes();
+  //   }
+  // }, [token]);
   
+  // const fetchRecipes = async () => {
+  //   try {
+  //     const res = await axios.get("http://localhost:8080/api/recipes", {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
+  //     console.log("Recipes:", res.data);
+  //     setRecipes(res.data || []);
+  //   } catch (err) {
+  //     console.error("Error fetching recipes:", err);
+  //   }
+  // };
+
+  // const getRecipeNameByVideoUrl = (videoUrl) => {
+  //   const recipe = recipes.find((r) => r.videoUrl === videoUrl);
+  //   return recipe ? recipe.name : "Unknown Recipe";
+  // };  
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this challenge?")) {
@@ -74,7 +105,7 @@ export default function ChallengePage() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-semibold">Your Challenges</h2>
         <Link
-          to="/video-selection"
+          to="/new-challenge"
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
         >
           + New Challenge
@@ -85,7 +116,7 @@ export default function ChallengePage() {
         <table className="min-w-full bg-white shadow-md rounded-lg">
           <thead>
             <tr className="bg-gray-100 text-gray-700 text-left">
-              <th className="py-3 px-6">Recipe</th>
+              <th className="py-3 px-6">Challenge No.</th>
               <th className="py-3 px-6">Date</th>
               <th className="py-3 px-6">Start Time</th>
               <th className="py-3 px-6">End Time</th>
@@ -94,9 +125,9 @@ export default function ChallengePage() {
             </tr>
           </thead>
           <tbody>
-            {challenges.map((challenge) => (
+            {challenges.map((challenge,index) => (
               <tr key={challenge.id} className="border-t">
-                <td className="py-4 px-6">{challenge.recipeName}</td>
+                <td className="py-4 px-6">{String(index + 1).padStart(2, '0')}</td>
                 <td className="py-4 px-6">{challenge.startDate}</td>
                 <td className="py-4 px-6">{challenge.startTime}</td>
                 <td className="py-4 px-6">{challenge.endTime}</td>

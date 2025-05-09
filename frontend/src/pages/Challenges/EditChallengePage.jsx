@@ -12,7 +12,8 @@ export default function EditChallengePage() {
     recipeId: "",
     startDate: "",
     startTime: "",
-    endTime: ""
+    endTime: "",
+    status: "pending"
   });
   const { user, token } = useAuth();
   const userId = user?.id;
@@ -31,26 +32,34 @@ export default function EditChallengePage() {
       };
   
       const [challengeRes, recipesRes] = await Promise.all([
-        axios.get(`/api/challenges/${id}/all`, headers),
-        axios.get("/api/recipes", headers)
+        axios.get(`http://localhost:8080/api/challenges/${id}/all`, headers),
+        axios.get("http://localhost:8080/api/recipes", headers)
       ]);
-
+  
       const fetchedChallenge = challengeRes?.data;
-      const fetchedRecipes = recipesRes?.data || [];
+      const fetchedRecipes = Array.isArray(recipesRes?.data) ? recipesRes.data : [];
+      console.log("Fetched challenge:", fetchedChallenge);
 
+  
+      if (!Array.isArray(recipesRes?.data)) {
+        console.warn("Expected recipes to be an array but got:", recipesRes?.data);
+      }
+  
       setChallenge(fetchedChallenge);
       setRecipes(fetchedRecipes);
-
+  
       setForm({
         recipeId: fetchedChallenge.recipeId,
         startDate: fetchedChallenge.startDate,
         startTime: fetchedChallenge.startTime,
-        endTime: fetchedChallenge.endTime
+        endTime: fetchedChallenge.endTime,
+        status: "Pending"
       });
     } catch (err) {
       console.error("Error fetching challenge or recipes", err);
     }
   };
+  
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -59,14 +68,22 @@ export default function EditChallengePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`/api/challenges/${id}`, form);
-      navigate("/challenges");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      await axios.put(`http://localhost:8080/api/challenges/${id}`, form, { headers });
+      
+      navigate("/challenges/${userId}");
     } catch (err) {
       console.error("Failed to update challenge", err);
     }
   };
 
-  if (!challenge) return <div>Loading...</div>;
+  if (!challenge) {
+    console.log("Challenge is still loading or failed to load:", challenge);
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

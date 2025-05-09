@@ -19,35 +19,62 @@ export default function ActiveChallenge() {
 
 
   console.log('Token:', token);
-  // Mock Data
-  const mockChallenge = {
-    id: "1",
-    date: "2025-04-07",
-    startTime: "10:00",
-    endTime: "10:30",
-    recipeId: "r1",
-    status: "planned",
-  };
-
-  const mockRecipe = {
-    id: "r1",
-    title: "Mock Recipe",
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-  };
-
+  
   useEffect(() => {
-    setTimeout(() => {
-      setChallenge(mockChallenge);
-      setRecipe(mockRecipe);
-    }, 500);
-  }, [id]);
+    const fetchData = async () => {
+      try {
+        const headers = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        };
+  
+        // Fetch all challenges for the user
+        const challengeRes = await axios.get(`http://localhost:8080/api/challenges/${userId}`, headers);
+        const challenges = challengeRes.data;
+  
+        // Get the most recent or active challenge (adjust logic as needed)
+        const active = challenges[challenges.length - 1];
+        setChallenge(active);
+  
+        // Fetch the related recipe using recipeVideoUrl as ID
+        if (active?.recipeVideoUrl) {
+          const recipeRes = await axios.get(`http://localhost:8080/api/recipes/${active.recipeVideoUrl}`, headers);
+          setRecipe(recipeRes.data);
+        }
+  
+      } catch (err) {
+        console.error("Error fetching challenge or recipe:", err);
+      }
+    };
+  
+    fetchData();
+  }, [token]);
+  
+    
+  
 
   useEffect(() => {
     if (challenge) {
+      console.log("Challenge date:", challenge.date);
+      console.log("Challenge endTime:", challenge.endTime);
+  
+      if (!challenge.date || !challenge.endTime) {
+        console.error("Missing challenge date or endTime");
+        return;
+      }
+  
       const end = new Date(`${challenge.date}T${challenge.endTime}`);
+  
+      if (isNaN(end.getTime())) {
+        console.error("Invalid date format:", end);
+        return;
+      }
+  
       const interval = setInterval(() => {
         const now = new Date();
         const diff = end - now;
+  
         if (diff <= 0) {
           clearInterval(interval);
           setTimeLeft(0);
@@ -55,10 +82,12 @@ export default function ActiveChallenge() {
           setTimeLeft(Math.floor(diff / 1000));
         }
       }, 1000);
+  
       setTimerInterval(interval);
       return () => clearInterval(interval);
     }
   }, [challenge]);
+  
 
   const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
@@ -66,20 +95,6 @@ export default function ActiveChallenge() {
     const secs = seconds % 60;
     return `${hrs}h ${mins}m ${secs}s`;
   };
-
-  // const handleFinish = async () => {
-  //   try {
-  //     setIsUploading(true);
-  //     clearInterval(timerInterval); // Stop the timer if running
-  
-  //     const uploadedImages = images.map((file) => URL.createObjectURL(file)); // Replace with real URLs if needed
-  
-  //     await axios.put(`http://localhost:8080/api/challenges/${id}/finish`, uploadedImages); // Call backend to mark as completed
-  //     console.log("Challenge marked as completed and images uploaded");
-  //   } catch (err) {
-  //     console.error("Error finishing challenge:", err);
-  //   }
-  // };
 
   const handleFinish = async () => {
     try {
@@ -136,7 +151,7 @@ export default function ActiveChallenge() {
     }
   };  
 
-  if (!challenge || !recipe) return <p className="p-4">Loading...</p>;
+  if (!challenge || !recipe) return <p className="p-7">Loading...</p>;
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
@@ -150,11 +165,24 @@ export default function ActiveChallenge() {
       <h2 className="text-xl font-bold mb-2">{recipe.title}</h2>
 
       <video
-        src={recipe.videoUrl}
-        controls
-        autoPlay
-        className="w-full mt-4 mb-4 rounded"
-      />
+  src={recipe.videoUrl}
+  controls
+  autoPlay
+  className="w-full mt-4 mb-4 rounded"
+/>
+
+
+<p className="mt-4 mb-4 text-gray-800">
+  {recipe.description}
+</p>
+
+<p className="mt-4 mb-4 text-gray-800">
+  {recipe.ingredients}
+</p>
+
+<p className="mt-4 mb-4 text-gray-800">
+  {recipe.instructions}
+</p>
 
       {timeLeft !== null && (
         <p className="text-red-600 font-semibold mb-4">
