@@ -23,10 +23,20 @@ import com.perfectrecipe.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import java.io.File;
 import org.springframework.beans.factory.annotation.Value;
+import com.perfectrecipe.service.RecipeService;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.perfectrecipe.service.NotificationService;
 
 @RestController
 @RequestMapping("/api/recipes")
+@CrossOrigin(origins = "*")
 public class RecipeController {
+
+    private static final Logger logger = LoggerFactory.getLogger(RecipeController.class);
 
     @Value("${app.upload.video-dir}")
     private String UPLOAD_DIR;
@@ -42,6 +52,12 @@ public class RecipeController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RecipeService recipeService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private void ensureUploadDirectoryExists() {
         try {
@@ -100,7 +116,7 @@ public class RecipeController {
             recipe.setServings(servings);
             recipe.setCuisine(cuisine);
             recipe.setUserId(userId);
-            recipe.setAuthor(author);
+            recipe.setAuthorId(author);
             
             // Parse JSON arrays
             recipe.setIngredients(objectMapper.readValue(ingredients, new TypeReference<List<String>>() {}));
@@ -152,8 +168,8 @@ public class RecipeController {
                 recipe.setVideoUrl(videoUrl);
             }
             
-            recipe.setCreatedAt(java.time.LocalDateTime.now().toString());
-            recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+            recipe.setCreatedAt(LocalDateTime.now());
+            recipe.setUpdatedAt(LocalDateTime.now());
             Recipe savedRecipe = recipeRepository.save(recipe);
             System.out.println("Recipe saved successfully");
             return ResponseEntity.ok(savedRecipe);
@@ -209,7 +225,7 @@ public class RecipeController {
                             recipe.setServings(recipeDetails.getServings());
                             recipe.setCuisine(recipeDetails.getCuisine());
                             recipe.setCategories(recipeDetails.getCategories());
-                            recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+                            recipe.setUpdatedAt(LocalDateTime.now());
 
                             if (image != null && !image.isEmpty()) {
                                 String contentType = image.getContentType();
@@ -300,7 +316,7 @@ public class RecipeController {
                     recipe.setServings(recipeDetails.getServings());
                     recipe.setCuisine(recipeDetails.getCuisine());
                     recipe.setCategories(recipeDetails.getCategories());
-                    recipe.setUpdatedAt(java.time.LocalDateTime.now().toString());
+                    recipe.setUpdatedAt(LocalDateTime.now());
                     // Do not update image here!
                     return ResponseEntity.ok(recipeRepository.save(recipe));
                 })
@@ -375,10 +391,10 @@ public class RecipeController {
             Comment comment = new Comment();
             comment.setRecipeId(recipeId);
             comment.setUserId(userId);
-            comment.setAuthorName(authorName);
+            comment.setUsername(authorName);
             comment.setContent(content);
             comment.setRating(rating);
-            comment.setCreatedAt(java.time.LocalDateTime.now().toString());
+            comment.setCreatedAt(LocalDateTime.now());
             
             Comment savedComment = commentRepository.save(comment);
             System.out.println("Comment saved successfully:");
@@ -410,11 +426,9 @@ public class RecipeController {
                     if (recipe.getLikedByUsers().contains(userId)) {
                         // Remove like
                         recipe.getLikedByUsers().remove(userId);
-                        recipe.setLikes(recipe.getLikes() == null ? 0 : recipe.getLikes() - 1);
                     } else {
                         // Add like
                         recipe.getLikedByUsers().add(userId);
-                        recipe.setLikes(recipe.getLikes() == null ? 1 : recipe.getLikes() + 1);
                     }
                     
                     Recipe updatedRecipe = recipeRepository.save(recipe);
@@ -463,7 +477,7 @@ public class RecipeController {
             System.out.println("- Comment ID: " + comment.getId());
             System.out.println("- Comment user ID: [" + commentUserId + "]");
             System.out.println("- Recipe ID: " + comment.getRecipeId());
-            System.out.println("- Author name: " + comment.getAuthorName());
+            System.out.println("- Author name: " + comment.getUsername());
             
             System.out.println("\nUser ID comparison:");
             System.out.println("- Authenticated user ID: [" + authenticatedUserId + "]");
@@ -511,5 +525,69 @@ public class RecipeController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to delete comment: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<?> addComment(
+            @PathVariable String id,
+            @RequestBody CommentRequest request,
+            Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Recipe recipe = recipeService.getRecipeById(id);
+            if (recipe == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Create notification for recipe owner if commenter is not the owner
+            if (!recipe.getAuthorId().equals(user.getId())) {
+                String message = String.format("%s commented on your recipe: %s", user.getUsername(), recipe.getTitle());
+                String link = String.format("/recipes/%s", recipe.getId());
+                logger.info("Creating notification for recipe owner: {}", recipe.getAuthorId());
+                notificationService.createNotification(recipe.getAuthorId(), user.getId(), "comment", message, link);
+            }
+
+            // Create notifications for other commenters
+            Set<String> notifiedUsers = new HashSet<>();
+            notifiedUsers.add(recipe.getAuthorId()); // Don't notify the owner again
+            notifiedUsers.add(user.getId()); // Don't notify the commenter
+
+            for (Recipe.Comment comment : recipe.getComments()) {
+                String commenterId = comment.getAuthorId();
+                if (!notifiedUsers.contains(commenterId)) {
+                    String message = String.format("%s also commented on %s's recipe: %s", 
+                        user.getUsername(), recipe.getAuthor().getUsername(), recipe.getTitle());
+                    String link = String.format("/recipes/%s", recipe.getId());
+                    logger.info("Creating notification for other commenter: {}", commenterId);
+                    notificationService.createNotification(commenterId, user.getId(), "comment", message, link);
+                    notifiedUsers.add(commenterId);
+                }
+            }
+
+            Recipe.Comment comment = recipeService.addComment(id, user.getId(), request.getContent());
+            return ResponseEntity.ok(comment);
+        } catch (Exception e) {
+            logger.error("Error adding comment: ", e);
+            return ResponseEntity.status(500).body("Error adding comment: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<Recipe> deleteComment(
+            @PathVariable String id,
+            @PathVariable String commentId,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        Recipe recipe = recipeService.deleteComment(id, commentId, userId);
+        return ResponseEntity.ok(recipe);
+    }
+
+    public static class CommentRequest {
+        private String content;
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
     }
 }

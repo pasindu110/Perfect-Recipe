@@ -15,13 +15,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -61,9 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Get token from header
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                logger.warn("No valid Authorization header found");
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("{\"error\":\"No token provided\"}");
+                logger.warn("No valid Authorization header found for request: {} {}", method, requestURI);
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "No token provided");
                 return;
             }
 
@@ -77,11 +80,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    logger.info("Authentication successful for user: {}", username);
+                    logger.info("Authentication successful for user: {} on endpoint: {}", username, requestURI);
                 } else {
-                    logger.warn("Invalid token for user: {}", username);
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("{\"error\":\"Invalid token\"}");
+                    logger.warn("Invalid token for user: {} on endpoint: {}", username, requestURI);
+                    sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
                     return;
                 }
             }
@@ -89,17 +91,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (Exception e) {
             logger.error("Error processing request", e);
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\":\"Internal server error\"}");
+            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
         }
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        Map<String, String> error = new HashMap<>();
+        error.put("error", message);
+        response.getWriter().write(objectMapper.writeValueAsString(error));
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+        String method = request.getMethod();
         return path.startsWith("/api/auth/") || 
-               (path.startsWith("/api/blogs") && "GET".equalsIgnoreCase(request.getMethod())) ||
-               (path.startsWith("/api/recipes") && "GET".equalsIgnoreCase(request.getMethod())) ||
-               path.startsWith("/uploads/");
+               (path.startsWith("/api/blogs") && "GET".equalsIgnoreCase(method)) ||
+               (path.startsWith("/api/recipes") && "GET".equalsIgnoreCase(method)) ||
+               path.startsWith("/uploads/") ||
+               path.startsWith("/api/about");
     }
 }

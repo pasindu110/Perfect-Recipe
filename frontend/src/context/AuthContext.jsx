@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config/config';
+import { toast } from 'react-hot-toast';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -16,7 +18,7 @@ export const AuthProvider = ({ children }) => {
 
   // Add automatic token refresh
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && token) {
       const REFRESH_INTERVAL = 14 * 60 * 1000; // Refresh every 14 minutes
       const refreshInterval = setInterval(async () => {
         await refreshToken();
@@ -24,20 +26,21 @@ export const AuthProvider = ({ children }) => {
 
       return () => clearInterval(refreshInterval);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, token]);
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const storedToken = localStorage.getItem('token');
       const userData = localStorage.getItem('user');
       
-      if (!token || !userData) {
+      if (!storedToken || !userData) {
         await logout();
         return;
       }
 
       try {
         const parsedUser = JSON.parse(userData);
+        setToken(storedToken);
         setIsAuthenticated(true);
         setUser(parsedUser);
       } catch (error) {
@@ -85,12 +88,14 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      setToken(data.token);
       setIsAuthenticated(true);
       setUser(data.user);
       navigate('/');
       return true;
     } catch (error) {
       console.error('Login error:', error);
+      toast.error(error.message);
       throw error;
     }
   };
@@ -99,33 +104,46 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-    } finally {
+      setToken(null);
       setIsAuthenticated(false);
       setUser(null);
       navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error during logout');
     }
   };
 
   const refreshToken = async () => {
     try {
-      const currentToken = localStorage.getItem('token');
-      if (!currentToken) return false;
+      if (!token) {
+        console.log('No token available for refresh');
+        return false;
+      }
 
       const response = await fetch(`${API_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${currentToken}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
+        console.error('Token refresh failed:', response.status);
         await logout();
         return false;
       }
 
       const data = await response.json();
+      if (!data.token) {
+        console.error('No token in refresh response');
+        await logout();
+        return false;
+      }
+
       localStorage.setItem('token', data.token);
+      setToken(data.token);
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -144,10 +162,10 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ 
       isAuthenticated, 
       user, 
+      token,
       login, 
       logout,
-      refreshToken,
-      token: localStorage.getItem('token') 
+      refreshToken
     }}>
       {children}
     </AuthContext.Provider>
