@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil {
@@ -57,11 +58,16 @@ public class JwtUtil {
     }
 
     public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Map<String, Object> decodeToken(String token) {
         try {
-            return extractClaim(token, Claims::getSubject);
+            Claims claims = extractAllClaims(token);
+            return claims.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         } catch (Exception e) {
-            logger.error("Error extracting username from token: {}", e.getMessage());
-            throw e;
+            throw new RuntimeException("Error decoding token", e);
         }
     }
 

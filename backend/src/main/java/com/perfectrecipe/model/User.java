@@ -37,6 +37,8 @@ public class User implements UserDetails {
     private String profileImageUrl;
     private Map<String, Object> shippingAddress;
     private Map<String, Object> billingAddress;
+    private String name;
+    private String profilePicture;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -68,5 +70,21 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
     }
 } 

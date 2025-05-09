@@ -5,6 +5,7 @@ import com.perfectrecipe.model.User;
 import com.perfectrecipe.model.LoginRequest;
 import com.perfectrecipe.repository.UserRepository;
 import com.perfectrecipe.security.JwtUtil;
+import com.perfectrecipe.model.GoogleOAuth2User;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -110,5 +111,52 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "Token refresh failed"));
         }
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> payload) {
+        String googleToken = payload.get("token");
+        if (googleToken == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Google token is required"));
+        }
+
+        try {
+            // Verify the Google token and get user info
+            GoogleOAuth2User googleUser = new GoogleOAuth2User(verifyGoogleToken(googleToken));
+            
+            // Check if user exists
+            Optional<User> existingUser = userRepository.findByEmail(googleUser.getEmail());
+            User user;
+
+            if (existingUser.isPresent()) {
+                user = existingUser.get();
+            } else {
+                // Create new user if doesn't exist
+                user = new User();
+                user.setEmail(googleUser.getEmail());
+                user.setName(googleUser.getName());
+                user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // Random password for OAuth users
+                user.setRoles(Collections.singletonList("ROLE_USER"));
+                user.setProfilePicture(googleUser.getPicture());
+                user = userRepository.save(user);
+            }
+
+            // Generate JWT token
+            String token = jwtUtil.generateToken(user.getEmail());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("user", user);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Invalid Google token"));
+        }
+    }
+
+    private Map<String, Object> verifyGoogleToken(String token) {
+        // This is a placeholder. In a real implementation, you would verify the token with Google's API
+        // For now, we'll just decode the JWT token and return the claims
+        return jwtUtil.decodeToken(token);
     }
 }
