@@ -17,10 +17,12 @@ const NewChallenge = () => {
   console.log('Token:', token);
 
   useEffect(() => {
-    if (location.state?.selected) {
-      setSelected(location.state.selected);
+    console.log("Received state:", location.state); 
+    if (location.state?.selectedRecipe) {
+      console.log("Selected recipe in NewChallenge:", location.state.selectedRecipe);
+      setSelected(location.state.selectedRecipe);
     }
-  }, [location.state]);
+  }, [location.state]);  
 
   const handleSubmit = async () => {
     if (!date || !start || !end) {
@@ -43,6 +45,7 @@ const NewChallenge = () => {
             endTime: end,
             status: status,
             userId: userId, // Use the actual user ID
+            recipeVideoUrl: selected?.videoUrl || "",
           }, {
             headers: {
               Authorization: `Bearer ${token}`

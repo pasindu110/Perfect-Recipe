@@ -83,7 +83,7 @@ public class ChallengeService {
         Optional<Challenge> optionalChallenge = challengeRepository.findById(id);
         if (optionalChallenge.isPresent()) {
             Challenge challenge = optionalChallenge.get();
-            challenge.setStatus("paused"); // or "pending" based on your needs
+            challenge.setStatus("Paused"); // or "pending" based on your needs
             return challengeRepository.save(challenge);
         } else {
             throw new RuntimeException("Challenge not found with ID: " + id);

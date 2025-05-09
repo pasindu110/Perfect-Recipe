@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from '../../context/AuthContext';
 
 export default function EditChallengePage() {
   const { id } = useParams();
@@ -13,6 +14,9 @@ export default function EditChallengePage() {
     startTime: "",
     endTime: ""
   });
+  const { user, token } = useAuth();
+  const userId = user?.id;
+
 
   useEffect(() => {
     fetchChallengeAndRecipes();
@@ -20,9 +24,15 @@ export default function EditChallengePage() {
 
   const fetchChallengeAndRecipes = async () => {
     try {
+      const headers = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+  
       const [challengeRes, recipesRes] = await Promise.all([
-        axios.get(`/api/challenges/${id}/all`),
-        // axios.get(`/api/recipes`)
+        axios.get(`/api/challenges/${id}/all`, headers),
+        axios.get("/api/recipes", headers)
       ]);
 
       const fetchedChallenge = challengeRes?.data;

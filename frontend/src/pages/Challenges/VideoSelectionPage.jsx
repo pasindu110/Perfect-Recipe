@@ -1,27 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext';
-
-const sampleRecipes = [
-  {
-    id: 1,
-    name: "Pasta Carbonara",
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-  },
-  {
-    id: 2,
-    name: "Classic Pancakes",
-    videoUrl: "https://www.w3schools.com/html/movie.mp4",
-  },
-  {
-    id: 3,
-    name: "Chicken Curry",
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-  },
-];
+import axios from "axios";
 
 const VideoSelectionPage = () => {
+  const [recipes, setRecipes] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, token } = useAuth();
 
@@ -29,24 +14,45 @@ const VideoSelectionPage = () => {
 
   console.log('Token:', token);
 
-  const handleSelect = (recipe) => {
-    setSelected(recipe);
-
-    // Navigate to New Challenge page after short delay
-    setTimeout(() => {
-      navigate("/new-challenge");
-      headers: {
-        Authorization: `Bearer ${token}`
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        const response = await axios.get("http://localhost:8080/api/recipes", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setRecipes(response.data);
+      } catch (error) {
+        console.error("Failed to fetch recipes:", error);
       }
+    };
+
+    fetchRecipes();
+  }, [token]);
+  
+
+  const handleSelect = (recipe) => {
+    console.log("Selected recipe to send:", recipe);
+    setSelected(recipe);
+    setLoading(true);
+
+    setTimeout(() => {
+      navigate("/new-challenge", {
+        state: {
+          selectedRecipe: recipe,
+          userId: user?.id,
+        },
+      });
     }, 500);
   };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-4">Select a Recipe Video</h2>
+      <h2 className="text-2xl font-semibold mb-4">Select a Recipe</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {sampleRecipes.map((recipe) => (
+        {recipes.map((recipe) => (
           <div
             key={recipe.id}
             onClick={() => handleSelect(recipe)}
@@ -56,14 +62,21 @@ const VideoSelectionPage = () => {
                 : ""
             }`}
           >
-            <video className="w-full h-40 object-cover rounded" controls muted>
-              <source src={recipe.videoUrl} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-            <p className="mt-2 text-center font-medium">{recipe.name}</p>
+            <img
+              src={recipe.image}
+              alt={recipe.title}
+              className="w-full h-40 object-cover rounded"
+            />
+            <h3 className="mt-2 text-lg font-medium text-center">{recipe.title}</h3>
+            <p className="text-sm">By {recipe.author}</p>
           </div>
         ))}
       </div>
+      {loading && (
+        <p className="text-center text-green-600 font-semibold">
+          Preparing your challenge...
+        </p>
+      )}
     </div>
   );
 };
