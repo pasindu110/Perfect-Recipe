@@ -42,31 +42,6 @@ export default function ChallengePage() {
     }
   }, [userId, token]);
 
-  // useEffect(() => {
-  //   if (token) {
-  //     fetchRecipes();
-  //   }
-  // }, [token]);
-  
-  // const fetchRecipes = async () => {
-  //   try {
-  //     const res = await axios.get("http://localhost:8080/api/recipes", {
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     });
-  //     console.log("Recipes:", res.data);
-  //     setRecipes(res.data || []);
-  //   } catch (err) {
-  //     console.error("Error fetching recipes:", err);
-  //   }
-  // };
-
-  // const getRecipeNameByVideoUrl = (videoUrl) => {
-  //   const recipe = recipes.find((r) => r.videoUrl === videoUrl);
-  //   return recipe ? recipe.name : "Unknown Recipe";
-  // };  
-
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this challenge?")) {
       await axios.delete(`http://localhost:8080/api/challenges/${id}`, {
@@ -106,7 +81,7 @@ export default function ChallengePage() {
         <h2 className="text-3xl font-semibold">Your Challenges</h2>
         <Link
           to="/new-challenge"
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          className="bg-rose-600 p-8 text-white px-4 py-2 rounded-full hover:bg-rose-500"
         >
           + New Challenge
         </Link>
